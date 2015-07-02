@@ -1,0 +1,55 @@
+name:                sync-mht
+version:             0.1.0.0
+
+synopsis:            synchronizes directories
+
+-- A longer description of the package.
+-- description:
+
+-- The license under which the package is released.
+license:             MIT
+
+-- The file containing the license text.
+license-file:        LICENSE
+
+-- The package author(s).
+author:              Emin Karayel <me@eminkarayel.de>
+
+-- An email address to which users can send suggestions, bug reports, and
+-- patches.
+maintainer:          Emin Karayel <me@eminkarayel.de>
+
+-- A copyright notice.
+-- copyright:
+
+-- category:
+
+build-type:          Simple
+
+-- Extra files to be distributed with the package, such as examples or a
+-- README.
+-- extra-source-files:
+
+-- Constraint on the version of Cabal needed to build this package.
+cabal-version:       >=1.10
+
+
+executable sync-mht
+  -- .hs or .lhs file containing the Main module.
+  main-is:             Main.hs
+
+  -- Modules included in this executable, other than Main.
+  -- other-modules:
+
+  -- LANGUAGE extensions used by modules in this package.
+  other-extensions:    FlexibleInstances, StandaloneDeriving
+  ghc-options: -Wall -Werror
+
+  -- Other library packages from which modules are imported.
+  build-depends:       base >=4.7 && <4.8, unix >=2.7 && <2.8, directory >=1.2 && <1.3, filepath >=1.3 && <1.4, process >=1.2 && <1.3, cryptohash >=0.11 && <0.12, byteable >=0.1 && <0.2, array >=0.5 && <0.6, containers >=0.5 && <0.6, text >=1.2 && <1.3, bytestring >=0.10 && <0.11, base64-bytestring >=1.0 && <1.1, base16-bytestring >=0.1 && <0.2, cereal >= 0.4, io-streams, transformers
+
+  -- Directories containing source files.
+  hs-source-dirs:      src/hs
+
+  -- Base language which the package is written in.
+  default-language:    Haskell2010
