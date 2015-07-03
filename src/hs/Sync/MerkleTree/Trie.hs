@@ -51,7 +51,6 @@ data NodeType = NodeType | LeaveType
     deriving (Eq, Read, Show, Generic)
 instance SE.Serialize NodeType
 
-
 data TrieLocation
     = TrieLocation
     { tl_level :: Int
@@ -62,7 +61,7 @@ data TrieLocation
 instance SE.Serialize TrieLocation
 
 degree :: Int
-degree = 2
+degree = 8
 
 class HasDigest a where
     digest :: a -> Digest SHA256

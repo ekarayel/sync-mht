@@ -36,7 +36,6 @@ newtype FileSize = FileSize { unFileSize :: Int64 }
 
 instance SE.Serialize FileSize
 
-
 data FileModTime = FileModTime { unModTime :: !Int64 }
     deriving (Show, Eq, Ord, Generic)
 
