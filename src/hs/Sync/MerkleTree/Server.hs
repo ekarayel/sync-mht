@@ -1,7 +1,7 @@
 module Sync.MerkleTree.Server where
 
 import Data.ByteString(ByteString)
-import System.IO.Streams(InputStream, OutputStream)
+import System.IO.Streams(OutputStream)
 import qualified Data.Serialize as SE
 import Sync.MerkleTree.Util.RequestMonad
 import Sync.MerkleTree.CommTypes

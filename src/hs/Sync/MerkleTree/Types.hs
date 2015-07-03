@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Sync.MerkleTree.Types where
 
 import System.FilePath
@@ -30,17 +31,11 @@ data Entry
 
 instance SE.Serialize Entry
 
-data FileSize = FileSize { unFileSize :: !Int64 }
-    deriving (Show, Eq, Ord, Generic, Typeable)
+newtype FileSize = FileSize { unFileSize :: Int64 }
+    deriving (Show, Eq, Ord, Generic, Num, Typeable)
 
 instance SE.Serialize FileSize
-instance Num FileSize where
-   (+) (FileSize x) (FileSize y) = FileSize $ x + y
-   (*) (FileSize x) (FileSize y) = FileSize $ x * y
-   negate (FileSize x) = FileSize $ negate x
-   abs (FileSize x) = FileSize $ abs x
-   signum (FileSize x) = FileSize $ signum x
-   fromInteger = FileSize . fromInteger
+
 
 data FileModTime = FileModTime { unModTime :: !Int64 }
     deriving (Show, Eq, Ord, Generic)

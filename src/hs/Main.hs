@@ -28,8 +28,8 @@ defaultSyncOptions =
 addIgnore :: FilePath -> SyncOptions -> SyncOptions
 addIgnore fp so = so { so_ignore = fp:(so_ignore so)}
 
-options :: [OptDescr (SyncOptions -> SyncOptions)]
-options =
+optDescriptions :: [OptDescr (SyncOptions -> SyncOptions)]
+optDescriptions =
     [ Option ['b'] ["base"] (ReqArg (\s so -> so { so_base = Just s }) "Path") "Base"
     , Option ['i'] ["ignore"] (ReqArg addIgnore "Path") "Ignore"
     , Option ['c'] ["client"] (NoArg (\so -> so { so_client = True })) "client"
@@ -44,9 +44,9 @@ putError = hPutStrLn stderr
 main :: IO ()
 main =
     do args <- getArgs
-       case (getOpt RequireOrder options args) of
+       case (getOpt RequireOrder optDescriptions args) of
          (options,rest,[]) -> catchIOError (run (toSyncOptions options) rest) (putError . show)
-         (_,_,errs) -> mapM_ putError (errs ++ [usageInfo header options])
+         (_,_,errs) -> mapM_ putError (errs ++ [usageInfo header optDescriptions])
     where
       header = concat
           [ "sync-mht version ", showVersion version, "\n"
