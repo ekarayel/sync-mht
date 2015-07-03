@@ -20,6 +20,7 @@
 -- the first request. The last request GetSumOf 3 3 will be send after the response for the first
 -- message has arrived.
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Sync.MerkleTree.Util.RequestMonad
@@ -30,48 +31,50 @@ module Sync.MerkleTree.Util.RequestMonad
     , getFromInputStream
     ) where
 
-import Data.IORef
 import Control.Applicative(Applicative(..))
+import Control.Concurrent(Chan, writeChan, readChan, newChan, forkIO)
 import Control.Monad(ap,liftM,unless)
 import Control.Monad.IO.Class(MonadIO(..))
-import System.IO.Streams(InputStream, OutputStream)
-import qualified System.IO.Streams as ST
-import Control.Concurrent(Chan, writeChan, readChan, newChan, forkIO)
-import Data.Serialize(Serialize)
-import qualified Data.Serialize as SE
 import Data.ByteString(ByteString)
-import qualified Data.ByteString as BS
-import System.IO(hPutStrLn,stderr)
+import Data.IORef(IORef,newIORef,modifyIORef,readIORef)
 import Data.Monoid(Monoid, mempty, mappend)
+import Data.Serialize(Serialize)
+import Data.Typeable(Typeable, Proxy(..), typeRep)
+import System.IO(hPutStrLn,stderr)
+import System.IO.Streams(InputStream, OutputStream)
+import qualified Data.ByteString as BS
+import qualified Data.Serialize as SE
+import qualified System.IO.Streams as ST
 
-data SplitState f b = forall a. (Monoid a) =>
-    SplitState [RequestMonad f a] a (a -> RequestMonad ByteString b)
-data RequestState f b = forall a. (Serialize a, Show a) => RequestState f (a -> RequestMonad ByteString b)
-data LiftIOState b = forall a. LiftIOState (IO a) (a -> RequestMonad ByteString b)
+data SplitState f b = forall a. (Monoid a) => SplitState [RequestMonadT f a] a (a -> RequestMonad b)
+data RequestState f b = forall a. (Serialize a, Typeable a) => RequestState f (a -> RequestMonad b)
+data LiftIOState b = forall a. LiftIOState (IO a) (a -> RequestMonad b)
 
-data RequestMonad f b
+type RequestMonad = RequestMonadT ByteString
+
+data RequestMonadT f b
     = Split (SplitState f b)
     | Request (RequestState f b)
     | LiftIO (LiftIOState b)
     | Return b
     | Fail String
 
-instance Functor (RequestMonad ByteString) where
+instance Functor (RequestMonadT ByteString) where
     fmap = liftM
 
-instance Applicative (RequestMonad ByteString) where
+instance Applicative (RequestMonadT ByteString) where
     pure  = return
     (<*>) = ap
 
-instance Monad (RequestMonad ByteString) where
+instance Monad (RequestMonadT ByteString) where
     return = Return
     fail = Fail
     (>>=) = bindImpl
 
-instance MonadIO (RequestMonad ByteString) where
+instance MonadIO (RequestMonadT ByteString) where
     liftIO x =  LiftIO $ LiftIOState x Return
 
-bindImpl :: (RequestMonad ByteString a) -> (a -> RequestMonad ByteString b) -> (RequestMonad ByteString b)
+bindImpl :: (RequestMonad a) -> (a -> RequestMonad b) -> (RequestMonad b)
 bindImpl f g =
     case f of
       Split (SplitState xs z cont) -> Split (SplitState xs z (\t -> bindImpl (cont t) g))
@@ -80,23 +83,29 @@ bindImpl f g =
       Return x -> g x
       Fail s -> Fail s
 
-request :: (Serialize a, Serialize b, Show b) => a -> RequestMonad ByteString b
+request :: (Serialize a, Serialize b, Typeable b) => a -> RequestMonad b
 request x = Request $ RequestState (SE.encode x) Return
 
-split :: (Monoid a) => [RequestMonad ByteString a] -> RequestMonad ByteString a
+split :: (Monoid a) => [RequestMonad a] -> RequestMonad a
 split alts = Split $ SplitState alts mempty Return
 
-queueRequests :: IORef Int -> Chan (Maybe ByteString) -> (RequestMonad ByteString b) -> IO (RequestMonad Int b)
-queueRequests idx queue root =
+data SendQueue
+    = SendQueue
+    { sq_chan :: Chan (Maybe ByteString)
+    , sq_sendIndex :: IORef Int
+    }
+
+queueRequests :: SendQueue -> (RequestMonad b) -> IO (RequestMonadT Int b)
+queueRequests sq root =
     case root of
       LiftIO (LiftIOState op cont) -> return $ LiftIO (LiftIOState op cont)
       Request (RequestState r c) ->
-          do writeChan queue (Just r)
-             modifyIORef idx (+1)
-             i <- readIORef idx
+          do writeChan (sq_chan sq) (Just r)
+             modifyIORef (sq_sendIndex sq) (+1)
+             i <- readIORef (sq_sendIndex sq)
              return $ Request (RequestState i c)
       Split (SplitState xs z cont) ->
-          do xs' <- mapM (queueRequests idx queue) xs
+          do xs' <- mapM (queueRequests sq) xs
              return $ Split $ SplitState xs' z cont
       Return x -> return $ Return x
       Fail s -> return $ Fail s
@@ -104,35 +113,37 @@ queueRequests idx queue root =
 runRequestMonad ::
     InputStream ByteString
     -> OutputStream ByteString
-    -> RequestMonad ByteString b
+    -> RequestMonad b
     -> IO b
-runRequestMonad i o r =
-    do q <- newChan
+runRequestMonad is os startMonad =
+    do sendChan <- newChan
        recvIdx <- newIORef 0
        sendIdx <- newIORef 0
-       _ <- forkIO $ writerThread o q
-       let loop s =
-               do s' <- receiverThread recvIdx sendIdx i q s
-                  case s' of
-                    Return x -> writeChan q Nothing >> return x
+       _ <- forkIO $ writerThread os sendChan
+       let sq = SendQueue { sq_chan = sendChan, sq_sendIndex = sendIdx }
+           loop monad =
+               do monad' <- receiverThread recvIdx sq is monad
+                  case monad' of
+                    Return x -> writeChan sendChan Nothing >> return x
                     Fail err -> fail err
-                    _ -> loop s'
-       queueRequests sendIdx q r >>= loop
+                    _ -> loop monad'
+       queueRequests sq startMonad >>= loop
 
 writerThread :: OutputStream ByteString -> Chan (Maybe ByteString) -> IO ()
-writerThread o chan = loop
+writerThread os chan = loop
     where
       loop =
           do mBs <- readChan chan
-             ST.write mBs o
-             ST.write (Just "") o
+             ST.write mBs os
+             ST.write (Just "") os
              maybe (return ()) (const loop) mBs
 
-getFromInputStream :: (Show a, Serialize a) => InputStream ByteString -> IO a
+getFromInputStream :: forall a. (Serialize a, Typeable a) => InputStream ByteString -> IO a
 getFromInputStream s = go (SE.Partial $ SE.runGetPartial SE.get)
     where
-      go (SE.Fail err bs) =
-          hPutStrLn stderr (concat ["X", err]) >> ST.unRead bs s >> fail err
+      failMsg err = concat
+         [ "Parsing data of type ", show $ typeRep (Proxy :: Proxy a)," from stream failed: ", err ]
+      go (SE.Fail err bs) = ST.unRead bs s >> fail (failMsg err)
       go (SE.Partial f) =
           do x <- ST.read s
              case x of
@@ -143,14 +154,13 @@ getFromInputStream s = go (SE.Partial $ SE.runGetPartial SE.get)
 
 receiverThread ::
     IORef Int
-    -> IORef Int
+    -> SendQueue
     -> InputStream ByteString
-    -> Chan (Maybe ByteString)
-    -> RequestMonad Int b
-    -> IO (RequestMonad Int b)
-receiverThread recvIdx sendIdx input queue root =
+    -> RequestMonadT Int b
+    -> IO (RequestMonadT Int b)
+receiverThread recvIdx sq input root =
     case root of
-      LiftIO (LiftIOState op cont) -> op >>= (queueRequests sendIdx queue . cont)
+      LiftIO (LiftIOState op cont) -> op >>= (queueRequests sq . cont)
       Request (RequestState i cont) ->
           do x <- getFromInputStream input
              modifyIORef recvIdx (+1)
@@ -158,15 +168,15 @@ receiverThread recvIdx sendIdx input queue root =
              unless (expected == i) $
                  do hPutStrLn stderr $ "Expected " ++ (show i) ++ " but got " ++ show expected
                     fail $ "Expected " ++ show i ++ " but got " ++ show expected
-             queueRequests sendIdx queue $ cont x
+             queueRequests sq $ cont x
       Split (SplitState xs z cont) -> loop cont z xs []
       Return x -> return $ Return x
       Fail err -> return $ Fail err
     where
-      loop cont z [] [] = queueRequests sendIdx queue $ cont z
+      loop cont z [] [] = queueRequests sq $ cont z
       loop cont z [] r = return $ Split $ SplitState (reverse r) z cont
       loop cont z (x:xs) r =
-          do x' <- receiverThread recvIdx sendIdx input queue x
+          do x' <- receiverThread recvIdx sq input x
              case x' of
                Return x'' -> loop cont (z `mappend` x'') xs r
                Fail s -> return $ Fail s

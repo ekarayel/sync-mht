@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 module Sync.MerkleTree.Types where
 
 import System.FilePath
@@ -6,11 +7,11 @@ import Data.Int
 import Crypto.Hash
 import Data.Ord
 import GHC.Generics
+import Data.Typeable
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text as T
 import Sync.MerkleTree.Trie
 import qualified Data.Serialize as SE
-
 
 data File
     = File
@@ -18,19 +19,19 @@ data File
       , f_size :: FileSize
       , f_modtime :: FileModTime
       }
-      deriving (Show, Eq, Ord, Generic)
+      deriving (Show, Eq, Ord, Generic, Typeable)
 
 instance SE.Serialize File
 
 data Entry
     = FileEntry File
     | DirectoryEntry Path
-    deriving (Show, Eq, Generic)
+    deriving (Show, Eq, Generic, Typeable)
 
 instance SE.Serialize Entry
 
 data FileSize = FileSize { unFileSize :: !Int64 }
-    deriving (Show, Eq, Ord, Generic)
+    deriving (Show, Eq, Ord, Generic, Typeable)
 
 instance SE.Serialize FileSize
 instance Num FileSize where

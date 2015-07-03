@@ -1,8 +1,10 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 module Sync.MerkleTree.Trie where
 
 import Prelude hiding (lookup)
 import qualified Data.List as L
+import Data.Typeable
 import Data.Byteable
 import Crypto.Hash
 import qualified Data.Set as S
@@ -70,7 +72,7 @@ data Fingerprint
       { f_hash :: Hash
       , f_nodeType :: NodeType
       }
-      deriving (Eq, Read, Show, Generic)
+      deriving (Eq, Read, Show, Generic, Typeable)
 
 instance SE.Serialize Fingerprint
 
