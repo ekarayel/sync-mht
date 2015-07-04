@@ -95,9 +95,14 @@ abstractClient cs fp trie =
                  DirectoryEntry p ->
                      (liftIO $ createDirectory $ toFilePath fp p)
        let copyEnt = [ e | cs_add cs, e <- newEntries ] ++ [ e | cs_update cs, e <- changedEntries ]
-       split $ map syncEntry (sort copyEnt)
+       mapM_ (split . map syncEntry) $ chunks (sort copyEnt)
        True <- terminateReq
        return ()
+
+chunks :: [a] -> [[a]]
+chunks l
+    | null l = []
+    | (h,t) <- splitAt 32 l = h:(chunks t)
 
 nodeReq :: (ClientMonad m) => (TrieLocation, Trie Entry) -> m (Diff Entry)
 nodeReq (loc,trie) =
