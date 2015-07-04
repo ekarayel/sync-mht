@@ -9,7 +9,7 @@
 	[
 		{
 			"name": "Build",
-   "shell_cmd": "cabal build",
+   "shell_cmd": "./src/build/scripts/build.sh",
    "file_regex": "^(src/hs[^:]*)\\:([0-9]*)\\:([0-9]*).*",
    "working_dir": "${project_path}"
 		}

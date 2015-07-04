@@ -61,7 +61,7 @@ analyse fp ignore path name
           | otherwise = return [] -- No support for devices, sockets yet.
 
 client :: FilePath -> [FilePath] -> IO ()
-client = run runClient stdin stdout
+client = run runClient stdout stdin
 
 server :: Handle -> Handle -> FilePath -> [FilePath] -> IO ()
 server = run runServer
