@@ -12,18 +12,18 @@ directories (assuming the actual difference of the directories is small).
 The communication happens through standard streams between parent and child processes, which can
 easily be routed through remote command execution tools, e.g.
 
-    sync-mht -b foo/ sync-mht -c -b bar/
+    sync-mht -s foo/ -d bar
 
 will synchronize the local folder bar/ with the local folder foo/, but
 
-    sync-mht -b foo/ ssh fred@example.org sync-mht -c -b bar/
+    sync-mht -s foo/ -d remote:bar -r "ssh fred@example.org sync-mht"
 
 will synchronize the folder bar/ in the home directory of the user fred on the host machine
 example.org with the local folder foo/.
 
 It is also possible to use it with docker, e.g.
 
-    sync-mht -b foo/ docker run -i --volumes-from bar ekarayel/sync-mht sync-mht -c -b /bar
+    sync-mht -b foo/ -d remote:bar -r "docker run -i --volumes-from bar ekarayel/sync-mht sync-mht"
 
 to synchronize the folder /bar (of the container named bar) with the local folder foo/.
 
