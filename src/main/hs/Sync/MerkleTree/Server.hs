@@ -52,7 +52,7 @@ instance ProtocolM ServerMonad where
 
 withHandle :: Handle -> Int -> ServerMonad QueryFileResponse
 withHandle h n =
-    do bs <- liftIO $ BS.hGet h 4096
+    do bs <- liftIO $ BS.hGet h (2^17)
        case () of
          () | BS.null bs ->
              do liftIO $ hClose h

@@ -78,8 +78,7 @@ abstractClient cs fp trie =
                case e of
                  FileEntry f -> liftIO $ removeFile $ toFilePath fp $ f_name f
                  DirectoryEntry p -> liftIO $ removeDirectory $ toFilePath fp p
-       let bigLoop [] _ _ = return ()
-           bigLoop (e:es) n s =
+       let syncEntry e =
                case e of
                  FileEntry f ->
                      do h <- liftIO $ openFile (toFilePath fp $ f_name f) WriteMode
@@ -93,11 +92,10 @@ abstractClient cs fp trie =
                         liftIO $ hClose h
                         let modTime = (CTime $ unModTime $ f_modtime f)
                         liftIO $ setFileTimes (toFilePath fp $ f_name f) modTime modTime
-                        bigLoop es (n-1) (s - f_size f)
                  DirectoryEntry p ->
-                     (liftIO $ createDirectory $ toFilePath fp p) >> bigLoop es (n-1) s
+                     (liftIO $ createDirectory $ toFilePath fp p)
        let copyEnt = [ e | cs_add cs, e <- newEntries ] ++ [ e | cs_update cs, e <- changedEntries ]
-       bigLoop (sort copyEnt) (length copyEnt) (dataSize newEntries)
+       split $ map syncEntry (sort copyEnt)
        True <- terminateReq
        return ()
 
