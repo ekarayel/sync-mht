@@ -16,14 +16,14 @@ easily be routed through remote command execution tools, e.g.
 
 will synchronize the local folder bar/ with the local folder foo/, but
 
-    sync-mht -s foo/ -d remote:bar -r "ssh fred@example.org sync-mht"
+    sync-mht -s foo/ -d remote:/bar -r "ssh fred@example.org sync-mht"
 
 will synchronize the folder bar/ in the home directory of the user fred on the host machine
 example.org with the local folder foo/.
 
 It is also possible to use it with docker, e.g.
 
-    sync-mht -b foo/ -d remote:bar -r "docker run -i --volumes-from bar ekarayel/sync-mht sync-mht"
+    sync-mht -s foo/ -d remote:/bar -r "docker run -i --volumes-from bar ekarayel/sync-mht sync-mht"
 
 to synchronize the folder /bar (of the container named bar) with the local folder foo/.
 
