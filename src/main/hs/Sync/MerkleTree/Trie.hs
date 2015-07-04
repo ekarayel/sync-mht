@@ -136,9 +136,6 @@ getAll (Trie _ node) =
       Node arr -> S.unions $ map getAll $ elems arr
       Leave s -> s
 
--- type QueryHash m a = TrieLocation -> m Fingerprint
--- type QuerySet m a = TrieLocation -> m (Set a)
-
 rootLocation :: TrieLocation
 rootLocation =
     TrieLocation

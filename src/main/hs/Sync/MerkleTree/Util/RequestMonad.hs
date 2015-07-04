@@ -27,7 +27,7 @@ module Sync.MerkleTree.Util.RequestMonad
     ( RequestMonad
     , request
     , runRequestMonad
-    , split
+    , splitRequests
     , getFromInputStream
     ) where
 
@@ -86,8 +86,8 @@ bindImpl f g =
 request :: (Serialize a, Serialize b, Typeable b) => a -> RequestMonad b
 request x = Request $ RequestState (SE.encode x) Return
 
-split :: (Monoid a) => [RequestMonad a] -> RequestMonad a
-split alts = Split $ SplitState alts mempty Return
+splitRequests :: (Monoid a) => [RequestMonad a] -> RequestMonad a
+splitRequests alts = Split $ SplitState alts mempty Return
 
 data SendQueue
     = SendQueue
@@ -138,12 +138,10 @@ writerThread os chan = loop
              ST.write (Just "") os
              maybe (return ()) (const loop) mBs
 
-getFromInputStream :: forall a. (Serialize a, Typeable a) => InputStream ByteString -> IO a
+getFromInputStream :: (Serialize a) => InputStream ByteString -> IO a
 getFromInputStream s = go (SE.Partial $ SE.runGetPartial SE.get)
     where
-      failMsg err = concat
-         [ "Parsing data of type ", show $ typeRep (Proxy :: Proxy a)," from stream failed: ", err ]
-      go (SE.Fail err bs) = ST.unRead bs s >> fail (failMsg err)
+      go (SE.Fail err bs) = ST.unRead bs s >> fail err
       go (SE.Partial f) =
           do x <- ST.read s
              case x of

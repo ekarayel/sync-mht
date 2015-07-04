@@ -36,7 +36,6 @@ main =
            , "    location: " ++ packageUrl
            , "executable sync-mht"
            , "    main-is: Main.hs"
-           , "    other-extensions: FlexibleInstances, StandaloneDeriving"
            , "    ghc-options: -Wall"
            , "    build-depends: "
            , "        base >=4.7 && <4.8"
@@ -55,6 +54,7 @@ main =
            , "        , cereal >= 0.4"
            , "        , io-streams"
            , "        , transformers"
+           , "        , mtl"
            , "    hs-source-dirs: src/main/hs"
            , "    default-language: Haskell2010"
            ]

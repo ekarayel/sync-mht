@@ -3,3 +3,5 @@ export GIT_DESCRIBE=$(git describe)
 runhaskell src/build/hs/CabalTemplate.hs
 cabal update
 cabal install
+
+

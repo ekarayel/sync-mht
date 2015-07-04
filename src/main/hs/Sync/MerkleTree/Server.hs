@@ -1,11 +1,12 @@
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 module Sync.MerkleTree.Server where
 
-import Data.ByteString(ByteString)
-import System.IO.Streams(OutputStream)
-import qualified Data.Serialize as SE
-import Sync.MerkleTree.Util.RequestMonad
+import Control.Monad.State
 import Sync.MerkleTree.CommTypes
-import qualified System.IO.Streams as ST
 import Sync.MerkleTree.Trie
 import qualified Data.Text.IO as T
 import Sync.MerkleTree.Types
@@ -14,27 +15,47 @@ import Data.Map(Map)
 import qualified Data.ByteString as BS
 import System.IO
 
-respond :: (Show a, SE.Serialize a) => OutputStream ByteString -> a -> IO ()
-respond os = mapM_ (flip ST.write os . Just) . (:[BS.empty]) . SE.encode
+data ServerState
+    = ServerState
+    { st_handles :: Map Int Handle
+    , st_nextHandle :: Int
+    , st_trie :: Trie Entry
+    , st_path :: FilePath
+    }
 
-runServer :: RunSide
-runServer fp i o trie = loop (M.empty, 0)
-    where
-      addHandle (hs,next) h = withHandle next (Just h) (M.insert next h hs, next+1)
-      withMsgHandle ch (handles, j) = withHandle ch (M.lookup ch handles) (handles, j)
-      withHandle mh h handles =
-          do let Just h' = h
-             bs <- BS.hGet h' 4096
-             case () of
-               () | BS.null bs -> hClose h' >> respond o Final >> loop handles
-                  | otherwise -> (respond o $ ToBeContinued bs $ ContinuationHandle mh) >> loop handles
-      loop :: (Map Int Handle, Int) -> IO ()
-      loop handles =
-          do l' <- getFromInputStream i
-             case l' of
-               QuerySet l -> (respond o $ querySet trie l) >> loop handles
-               QueryHash l -> (respond o $ queryHash trie l) >> loop handles
-               Log msg -> T.putStrLn (unSerText msg) >> respond o True >> loop handles
-               QueryFileContinuation (ContinuationHandle h) -> withMsgHandle h handles
-               QueryFile f -> openFile (toFilePath fp f) ReadMode >>= addHandle handles
-               Terminate -> respond o True >> return ()
+type ServerMonad = StateT ServerState IO
+
+startServerState :: FilePath -> Trie Entry -> ServerState
+startServerState fp trie =
+    ServerState
+    { st_handles = M.empty
+    , st_nextHandle = 0
+    , st_trie = trie
+    , st_path = fp
+    }
+
+instance ProtocolM ServerMonad where
+    querySetReq l = get >>= (\s -> return $ querySet (st_trie s) l)
+    queryHashReq l = get >>= (\s -> return $ queryHash (st_trie s) l)
+    logReq (SerText msg) = liftIO (T.hPutStrLn stderr msg) >> return True
+    queryFileContReq (ContHandle n) =
+         do s <- get
+            let Just h = M.lookup n (st_handles s)
+            withHandle h n
+    queryFileReq f =
+          do s <- get
+             h <- liftIO $ openFile (toFilePath (st_path s) f) ReadMode
+             let n = st_nextHandle s
+             put $ s { st_handles = M.insert n h (st_handles s), st_nextHandle = n + 1 }
+             withHandle h n
+    terminateReq = return True
+
+withHandle :: Handle -> Int -> ServerMonad QueryFileResponse
+withHandle h n =
+    do bs <- liftIO $ BS.hGet h 4096
+       case () of
+         () | BS.null bs ->
+             do liftIO $ hClose h
+                modify (\s -> s { st_handles = M.delete n (st_handles s) })
+                return $ Final
+            | otherwise -> return $ ToBeContinued bs $ ContHandle n
