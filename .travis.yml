@@ -4,6 +4,9 @@ ghc:
 before_install:
 - chmod +x src/build/scripts/*.sh
 - src/build/scripts/prepare.sh
+before_deploy:
+- chmod +x src/build/scripts/*.sh
+- src/build/scripts/prepare.sh
 deploy:
   provider: hackage
   username: emink
