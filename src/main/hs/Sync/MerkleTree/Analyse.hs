@@ -18,7 +18,6 @@ import System.Posix.Types
 import System.Posix.Files
 import qualified Data.Text as T
 
-
 isRealFile :: String -> Bool
 isRealFile x
     | x `elem` [".", ".."] = False

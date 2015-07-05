@@ -1,3 +1,4 @@
+-- main module
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 import System.Environment

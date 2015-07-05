@@ -10,7 +10,10 @@ time and communication (round) complexity grows only logarithmically with the ac
 directories (assuming the actual difference of the directories is small).
 
 The communication happens through standard streams between parent and child processes, which can
-easily be routed through remote command execution tools, e.g.
+easily be routed through remote command execution tools.
+
+## Examples
+The following command
 
     sync-mht -s foo/ -d bar
 
