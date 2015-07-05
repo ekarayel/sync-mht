@@ -3,6 +3,6 @@ language: haskell
 ghc:
   - 7.8
 
-before_script:
-  - chmod +x src/scripts/*.sh
-  - src/scripts/prepare.sh
+before_install:
+  - chmod +x src/build/scripts/*.sh
+  - src/build/scripts/prepare.sh
