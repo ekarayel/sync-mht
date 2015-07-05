@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Sync.MerkleTree.CommTypes where
 
-import Control.Monad.IO.Class
 import GHC.Generics
 import Data.Set(Set)
 import Data.Serialize
@@ -14,7 +13,7 @@ import Data.Typeable
 import Sync.MerkleTree.Types
 import Sync.MerkleTree.Trie
 
-class (MonadIO m) => (ProtocolM m) where
+class Monad m => Protocol m where
     queryHashReq :: TrieLocation -> m Fingerprint
     querySetReq :: TrieLocation -> m (Set Entry)
     logReq :: SerText -> m Bool

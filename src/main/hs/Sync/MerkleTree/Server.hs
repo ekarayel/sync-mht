@@ -34,25 +34,25 @@ startServerState fp trie =
     , st_path = fp
     }
 
-instance ProtocolM ServerMonad where
+instance Protocol ServerMonad where
     querySetReq l = get >>= (\s -> return $ querySet (st_trie s) l)
     queryHashReq l = get >>= (\s -> return $ queryHash (st_trie s) l)
     logReq (SerText msg) = liftIO (T.hPutStrLn stderr msg) >> return True
     queryFileContReq (ContHandle n) =
-         do s <- get
-            let Just h = M.lookup n (st_handles s)
-            withHandle h n
+        do s <- get
+           let Just h = M.lookup n (st_handles s)
+           withHandle h n
     queryFileReq f =
-          do s <- get
-             h <- liftIO $ openFile (toFilePath (st_path s) f) ReadMode
-             let n = st_nextHandle s
-             put $ s { st_handles = M.insert n h (st_handles s), st_nextHandle = n + 1 }
-             withHandle h n
+        do s <- get
+           h <- liftIO $ openFile (toFilePath (st_path s) f) ReadMode
+           let n = st_nextHandle s
+           put $ s { st_handles = M.insert n h (st_handles s), st_nextHandle = n + 1 }
+           withHandle h n
     terminateReq = return True
 
 withHandle :: Handle -> Int -> ServerMonad QueryFileResponse
 withHandle h n =
-    do bs <- liftIO $ BS.hGet h (2^17)
+    do bs <- liftIO $ BS.hGet h (2^(17::Int))
        case () of
          () | BS.null bs ->
              do liftIO $ hClose h

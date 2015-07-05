@@ -39,7 +39,6 @@ import Data.ByteString(ByteString)
 import Data.IORef(IORef,newIORef,modifyIORef,readIORef)
 import Data.Monoid(Monoid, mempty, mappend)
 import Data.Serialize(Serialize)
-import Data.Typeable(Typeable, Proxy(..), typeRep)
 import System.IO(hPutStrLn,stderr)
 import System.IO.Streams(InputStream, OutputStream)
 import qualified Data.ByteString as BS
@@ -47,7 +46,7 @@ import qualified Data.Serialize as SE
 import qualified System.IO.Streams as ST
 
 data SplitState f b = forall a. (Monoid a) => SplitState [RequestMonadT f a] a (a -> RequestMonad b)
-data RequestState f b = forall a. (Serialize a, Typeable a) => RequestState f (a -> RequestMonad b)
+data RequestState f b = forall a. (Serialize a) => RequestState f (a -> RequestMonad b)
 data LiftIOState b = forall a. LiftIOState (IO a) (a -> RequestMonad b)
 
 type RequestMonad = RequestMonadT ByteString
@@ -83,7 +82,7 @@ bindImpl f g =
       Return x -> g x
       Fail s -> Fail s
 
-request :: (Serialize a, Serialize b, Typeable b) => a -> RequestMonad b
+request :: (Serialize a, Serialize b) => a -> RequestMonad b
 request x = Request $ RequestState (SE.encode x) Return
 
 splitRequests :: (Monoid a) => [RequestMonad a] -> RequestMonad a

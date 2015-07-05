@@ -105,12 +105,11 @@ _HIDDENT_CLIENT_MODE_OPTION_ = "--hidden-client-mode-option"
 main :: IO ()
 main = flip catchIOError (putError . show) $
     do args <- getArgs
-       case args of
-         (_HIDDENT_CLIENT_MODE_OPTION_:[]) -> child
-         opts ->
-             case (getOpt (ReturnInOrder parseNonOption) optDescriptions opts) of
-               (options,[],[]) -> run $ toSyncOptions options
-               (_,_,errs) -> printUsageInfo errs
+       let parsedOpts = getOpt (ReturnInOrder parseNonOption) optDescriptions args
+       case () of
+         () | [_HIDDENT_CLIENT_MODE_OPTION_] == args -> child
+            | (options,[],[]) <- parsedOpts -> run $ toSyncOptions options
+            | (_,_,errs) <- parsedOpts -> printUsageInfo errs
 
 data Side
     = Remote FilePath

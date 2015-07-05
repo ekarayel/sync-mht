@@ -41,10 +41,10 @@ dataSize s = getSum $ F.foldMap sizeOf s
 dataSizeText :: (Foldable f) => f Entry -> T.Text
 dataSizeText s = T.concat [showText $ unFileSize $ dataSize s, " bytes"]
 
-class (ProtocolM m) => (ClientMonad m) where
+class (Protocol m, MonadIO m) => (ClientMonad m) where
     split :: (Monoid a) => [m a] -> m a
 
-logClient :: (ClientMonad m) => T.Text -> m ()
+logClient :: (Protocol m) => T.Text -> m ()
 logClient t =
     do True <- logReq $ SerText t
        return ()
