@@ -6,7 +6,7 @@ import System.IO
 main :: IO ()
 main =
     do gitCommitHash <- getEnv "GIT_COMMIT_HASH"
-       let version = "0.1.0.0-g" ++ (take 8 gitCommitHash)
+       let version = "0.2.0.0-g" ++ (take 8 gitCommitHash)
        synopsisSection <- getSection "Synopsis"
        descriptionSection <- getSection "Description"
        let me = "Emin Karayel <me@eminkarayel.de>"

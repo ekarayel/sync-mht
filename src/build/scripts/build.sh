@@ -1,4 +1,3 @@
-export GIT_COMMIT_HASH=$(git log --format=%H -n1)
-runhaskell src/build/hs/CabalTemplate.hs
+src/build/scripts/prepare.sh
 cabal update
 cabal install
