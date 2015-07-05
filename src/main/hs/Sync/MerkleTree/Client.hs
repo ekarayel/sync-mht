@@ -78,31 +78,36 @@ abstractClient cs fp trie =
                case e of
                  FileEntry f -> liftIO $ removeFile $ toFilePath fp $ f_name f
                  DirectoryEntry p -> liftIO $ removeDirectory $ toFilePath fp p
-       let syncEntry e =
-               case e of
-                 FileEntry f ->
-                     do h <- liftIO $ openFile (toFilePath fp $ f_name f) WriteMode
-                        let loop Final = return ()
-                            loop (ToBeContinued bs ch) =
-                                do liftIO $ BS.hPut h bs
-                                   res <- queryFileContReq ch
-                                   loop res
-                        res <- queryFileReq (f_name f)
-                        loop res
-                        liftIO $ hClose h
-                        let modTime = (CTime $ unModTime $ f_modtime f)
-                        liftIO $ setFileTimes (toFilePath fp $ f_name f) modTime modTime
-                 DirectoryEntry p ->
-                     (liftIO $ createDirectory $ toFilePath fp p)
-       let copyEnt = [ e | cs_add cs, e <- newEntries ] ++ [ e | cs_update cs, e <- changedEntries ]
-       mapM_ (split . map syncEntry) $ chunks (sort copyEnt)
+       mapM_ (split . map (synchronizeNewOrChangedEntry fp))
+           $ splitEvery _CONCURRENT_FILETRANSFER_SIZE_ $ sort
+           $ [ e | cs_add cs, e <- newEntries ] ++ [ e | cs_update cs, e <- changedEntries ]
        True <- terminateReq
        return ()
 
-chunks :: [a] -> [[a]]
-chunks l
+_CONCURRENT_FILETRANSFER_SIZE_ :: Int
+_CONCURRENT_FILETRANSFER_SIZE_ = 96
+
+splitEvery :: Int -> [a] -> [[a]]
+splitEvery n l
     | null l = []
-    | (h,t) <- splitAt 32 l = h:(chunks t)
+    | (h,t) <- splitAt n l = h:(splitEvery n t)
+
+synchronizeNewOrChangedEntry :: (ClientMonad m) => FilePath -> Entry -> m ()
+synchronizeNewOrChangedEntry fp entry =
+    case entry of
+      FileEntry f ->
+          do firstResult <- queryFileReq (f_name f)
+             h <- liftIO $ openFile (toFilePath fp $ f_name f) WriteMode
+             let loop result =
+                     case result of
+                       Final -> return ()
+                       ToBeContinued content contHandle ->
+                           (liftIO $ BS.hPut h content) >> queryFileContReq contHandle >>= loop
+             loop firstResult
+             liftIO $ hClose h
+             let modTime = (CTime $ unModTime $ f_modtime f)
+             liftIO $ setFileTimes (toFilePath fp $ f_name f) modTime modTime
+      DirectoryEntry p -> liftIO $ createDirectory $ toFilePath fp p
 
 nodeReq :: (ClientMonad m) => (TrieLocation, Trie Entry) -> m (Diff Entry)
 nodeReq (loc,trie) =

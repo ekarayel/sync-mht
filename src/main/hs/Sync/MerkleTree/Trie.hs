@@ -61,7 +61,7 @@ data TrieLocation
 instance SE.Serialize TrieLocation
 
 degree :: Int
-degree = 8
+degree = 64
 
 class HasDigest a where
     digest :: a -> Digest SHA256
