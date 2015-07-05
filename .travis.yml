@@ -4,5 +4,5 @@ env:
   - GHCVER=7.8.3
 
 before_install:
-  - chmod +x src/scripts/*.sh
-  - src/scripts/prepare.sh
+  - chmod +x src/build/scripts/*.sh
+  - src/build/scripts/prepare.sh
