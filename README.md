@@ -1,12 +1,12 @@
 # sync-mht
 
 ## Synopsis
-Fast incremental file transfer using Merke-Hash-Trees
+Fast incremental file transfer using Merkle-Hash-Trees
 
 ## Description
 A command line tool that can be used to incrementally synchronize a directory hierarchy with a
 second one. It is using a Merkle-Hash-Tree to compare the folders, such that the synchronization
-time and communication (round) complexity grows only logarithmically with the actual size of the
+time and communication (round) complexity grows only logarithmically with the size of the
 directories (assuming the actual difference of the directories is small).
 
 The communication happens through standard streams between parent and child processes, which can
