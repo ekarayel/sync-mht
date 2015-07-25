@@ -3,10 +3,10 @@ ghc:
 - 7.8
 before_install:
 - chmod +x configure.hs
-- configure.hs
+- ./configure.hs
 before_deploy:
 - chmod +x configure.hs
-- configure.hs
+- ./configure.hs
 deploy:
   provider: hackage
   username: emink
