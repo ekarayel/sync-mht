@@ -55,9 +55,9 @@ data QueryFileResponse
 
 instance Serialize QueryFileResponse
 
-data ChildSide
+data Side
     = Service FilePath ClientServerOptions
     | Client FilePath ClientServerOptions
     deriving (Show, Generic, Typeable)
 
-instance Serialize ChildSide
+instance Serialize Side

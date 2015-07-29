@@ -65,19 +65,17 @@ child :: IO ()
 child =
     do streams <- openStreams stdin stdout
        side <- getFromInputStream (sp_in streams)
-       case side of
-         Service dir clientServerOpts -> server dir clientServerOpts streams
-         Client dir clientServerOpts -> client dir clientServerOpts streams
+       serviceOrClient side streams
 
 parent :: StreamPair -> FilePath -> FilePath -> Direction -> ClientServerOptions -> IO ()
 parent streams source destination direction clientServerOpts =
     case direction of
       FromRemote ->
         do respond (sp_out streams) $ Service source clientServerOpts
-           client destination clientServerOpts streams
+           serviceOrClient (Client destination clientServerOpts) streams
       ToRemote ->
         do respond (sp_out streams) $ Client destination clientServerOpts
-           server source clientServerOpts streams
+           serviceOrClient (Service source clientServerOpts) streams
 
 respond :: (Show a, SE.Serialize a) => OutputStream ByteString -> a -> IO ()
 respond os = mapM_ (flip ST.write os . Just) . (:[BS.empty]) . SE.encode
@@ -87,6 +85,12 @@ local cs source destination =
     do sourceDir <- liftM (mkTrie 0) $ analyseDirectory source (cs_ignore cs) Root
        destinationDir <- liftM (mkTrie 0) $ analyseDirectory destination (cs_ignore cs) Root
        evalStateT (abstractClient cs destination destinationDir) (startServerState source sourceDir)
+
+serviceOrClient :: Side -> StreamPair -> IO ()
+serviceOrClient side streams =
+    case side of
+      Service dir clientServerOpts -> server dir clientServerOpts streams
+      Client dir clientServerOpts -> client dir clientServerOpts streams
 
 server :: FilePath -> ClientServerOptions -> StreamPair -> IO ()
 server fp cs streams =

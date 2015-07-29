@@ -32,3 +32,6 @@ It is also possible to use it with docker, e.g.
 
 to synchronize the folder /bar (of the container named bar) with the local folder foo/.
 
+Note that: The options -a -u --delete respectively, allow copying of files to target directory,
+updating files that are already in the target directory - not matching the contents in the source
+directory and --delete files that are in the destination directory but not in the source directory.

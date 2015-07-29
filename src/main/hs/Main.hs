@@ -1,4 +1,3 @@
--- main module
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 import System.Environment
@@ -12,13 +11,14 @@ import Data.Version (showVersion)
 
 import Sync.MerkleTree.CommTypes
 import Sync.MerkleTree.Sync
+import Text.Regex
 
 data SyncOptions
     = SyncOptions
       { so_source :: Maybe FilePath
       , so_destination :: Maybe FilePath
       , so_remote :: Maybe String
-      , so_ignore :: [FilePath]
+      , so_ignore :: [String]
       , so_add :: Bool
       , so_update :: Bool
       , so_delete :: Bool
@@ -40,14 +40,13 @@ defaultSyncOptions =
     , so_nonOptions = []
     }
 
-
 toClientServerOptions :: SyncOptions -> ClientServerOptions
 toClientServerOptions so =
      ClientServerOptions
      { cs_add = so_add so
      , cs_update = so_update so
      , cs_delete = so_delete so
-     , cs_ignore = so_ignore so
+     , cs_ignore = map mkRegex $ so_ignore so
      }
 
 optDescriptions :: [OptDescr (SyncOptions -> SyncOptions)]
@@ -112,11 +111,11 @@ main = flip catchIOError (putError . show) $
             | (options,[],[]) <- parsedOpts -> run $ toSyncOptions options
             | (_,_,errs) <- parsedOpts -> printUsageInfo errs
 
-data Side
+data Location
     = Remote FilePath
     | Local FilePath
 
-parseFilePath :: FilePath -> Side
+parseFilePath :: FilePath -> Location
 parseFilePath fp
     | Just rest <- stripPrefix "remote:" fp = Remote rest
     | otherwise = Local fp

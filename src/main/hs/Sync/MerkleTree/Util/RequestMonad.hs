@@ -39,7 +39,6 @@ import Data.ByteString(ByteString)
 import Data.IORef(IORef,newIORef,modifyIORef,readIORef)
 import Data.Monoid(Monoid, mempty, mappend)
 import Data.Serialize(Serialize)
-import System.IO(hPutStrLn,stderr)
 import System.IO.Streams(InputStream, OutputStream)
 import qualified Data.ByteString as BS
 import qualified Data.Serialize as SE
@@ -162,9 +161,7 @@ receiverThread recvIdx sq input root =
           do x <- getFromInputStream input
              modifyIORef recvIdx (+1)
              expected <- readIORef recvIdx
-             unless (expected == i) $
-                 do hPutStrLn stderr $ "Expected " ++ (show i) ++ " but got " ++ show expected
-                    fail $ "Expected " ++ show i ++ " but got " ++ show expected
+             unless (expected == i) $ fail ("Expected " ++ (show i) ++ " but got " ++ show expected)
              queueRequests sq $ cont x
       Split (SplitState xs z cont) -> loop cont z xs []
       Return x -> return $ Return x

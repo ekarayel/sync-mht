@@ -44,6 +44,7 @@ main =
            , "        , cereal >= 0.4 && < 0.5"
            , "        , io-streams >= 1.2 && <1.3"
            , "        , transformers >= 0.4 && < 0.5"
+           , "        , regex-compat-tdfa >= 0.95 && < 0.96"
            , "        , mtl >= 2.2 && < 2.3"
            , "    hs-source-dirs: src/main/hs"
            , "    default-language: Haskell2010"
