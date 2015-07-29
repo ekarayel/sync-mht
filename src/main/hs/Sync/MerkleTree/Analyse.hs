@@ -8,6 +8,7 @@ module Sync.MerkleTree.Analyse
     ) where
 
 import Control.Monad
+import Data.Maybe
 import System.FilePath
 import Foreign.C.Types
 import Prelude hiding (lookup)
@@ -15,7 +16,7 @@ import Sync.MerkleTree.Types
 import System.Directory
 import System.Posix.Types
 import System.Posix.Files
-import Text.Regex( matchRegex )
+import Text.Regex (matchRegex, mkRegex, Regex)
 import qualified Data.Text as T
 
 isRealFile :: String -> Bool
@@ -26,8 +27,11 @@ isRealFile x
 shouldIgnore :: Path -> [Regex] -> Bool
 shouldIgnore p regexes = any (isJust . (`matchRegex` (toFilePath "" p))) regexes
 
-analyseDirectory :: FilePath -> [Regex] -> Path -> IO [Entry]
-analyseDirectory fp ignore path
+analyseDirectory :: FilePath -> [String] -> Path -> IO [Entry]
+analyseDirectory fp ignore path = analyseDir fp (map mkRegex ignore) path
+
+analyseDir :: FilePath -> [Regex] -> Path -> IO [Entry]
+analyseDir fp ignore path
     | shouldIgnore path ignore = return []
     | otherwise =
         do files <- getDirectoryContents fp
@@ -53,6 +57,6 @@ analyse fp ignore path name
                     , f_modtime = FileModTime modtime
                     } ]
           | isDirectory status =
-              liftM ((DirectoryEntry path'):) $ analyseDirectory fp' ignore path'
+              liftM ((DirectoryEntry path'):) $ analyseDir fp' ignore path'
           | otherwise = return [] -- No support for devices, sockets yet.
 

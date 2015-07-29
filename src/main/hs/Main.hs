@@ -11,7 +11,6 @@ import Data.Version (showVersion)
 
 import Sync.MerkleTree.CommTypes
 import Sync.MerkleTree.Sync
-import Text.Regex
 
 data SyncOptions
     = SyncOptions
@@ -46,7 +45,7 @@ toClientServerOptions so =
      { cs_add = so_add so
      , cs_update = so_update so
      , cs_delete = so_delete so
-     , cs_ignore = map mkRegex $ so_ignore so
+     , cs_ignore = so_ignore so
      }
 
 optDescriptions :: [OptDescr (SyncOptions -> SyncOptions)]
