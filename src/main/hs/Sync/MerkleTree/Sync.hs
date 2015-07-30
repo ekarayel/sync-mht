@@ -64,18 +64,26 @@ data Direction
 child :: IO ()
 child =
     do streams <- openStreams stdin stdout
-       side <- getFromInputStream (sp_in streams)
-       serviceOrClient side streams
+       launchMessage <- getFromInputStream (sp_in streams)
+       serverOrClient (read launchMessage) streams
 
 parent :: StreamPair -> FilePath -> FilePath -> Direction -> ClientServerOptions -> IO ()
 parent streams source destination direction clientServerOpts =
     case direction of
       FromRemote ->
-        do respond (sp_out streams) $ Service source clientServerOpts
-           serviceOrClient (Client destination clientServerOpts) streams
+        do respond (sp_out streams) $ show $ mkLaunchMessage Server source
+           serverOrClient (mkLaunchMessage Client destination) streams
       ToRemote ->
-        do respond (sp_out streams) $ Client destination clientServerOpts
-           serviceOrClient (Service source clientServerOpts) streams
+        do respond (sp_out streams) $ show $ mkLaunchMessage Client destination
+           serverOrClient (mkLaunchMessage Server source) streams
+    where
+      mkLaunchMessage side dir =
+          LaunchMessage
+          { lm_dir = dir
+          , lm_clientServerOptions = clientServerOpts
+          , lm_protocolVersion = thisProtocolVersion
+          , lm_side = side
+          }
 
 respond :: (Show a, SE.Serialize a) => OutputStream ByteString -> a -> IO ()
 respond os = mapM_ (flip ST.write os . Just) . (:[BS.empty]) . SE.encode
@@ -86,16 +94,19 @@ local cs source destination =
        destinationDir <- liftM (mkTrie 0) $ analyseDirectory destination (cs_ignore cs) Root
        evalStateT (abstractClient cs destination destinationDir) (startServerState source sourceDir)
 
-serviceOrClient :: Side -> StreamPair -> IO ()
-serviceOrClient side streams =
-    case side of
-      Service dir clientServerOpts -> server dir clientServerOpts streams
-      Client dir clientServerOpts -> client dir clientServerOpts streams
+serverOrClient :: LaunchMessage -> StreamPair -> IO ()
+serverOrClient lm streams
+    | lm_protocolVersion lm == thisProtocolVersion =
+        let side =
+                case lm_side lm of
+                  Server -> server
+                  Client -> client (lm_clientServerOptions lm)
+        in do entries <- analyseDirectory (lm_dir lm) (cs_ignore $ lm_clientServerOptions lm) Root
+              side entries (lm_dir lm) streams
+    | otherwise = fail "Incompatible sync-mht versions."
 
-server :: FilePath -> ClientServerOptions -> StreamPair -> IO ()
-server fp cs streams =
-    do dir <- analyseDirectory fp (cs_ignore cs) Root
-       evalStateT loop (startServerState fp $ mkTrie 0 dir)
+server :: [Entry] -> FilePath -> StreamPair -> IO ()
+server entries fp streams = evalStateT loop (startServerState fp $ mkTrie 0 entries)
     where
        serverRespond = liftIO . respond (sp_out streams)
        loop =
@@ -108,8 +119,6 @@ server fp cs streams =
                 Log t -> logReq t >>= serverRespond >> loop
                 Terminate -> terminateReq >>= serverRespond >> return ()
 
-client :: FilePath -> ClientServerOptions -> StreamPair -> IO ()
-client fp cs streams =
-    do dir <- analyseDirectory fp (cs_ignore cs) Root
-       runRequestMonad (sp_in streams) (sp_out streams) $ abstractClient cs fp $ mkTrie 0 dir
-
+client :: ClientServerOptions -> [Entry] -> FilePath -> StreamPair -> IO ()
+client cs entries fp streams =
+    runRequestMonad (sp_in streams) (sp_out streams) $ abstractClient cs fp $ mkTrie 0 entries

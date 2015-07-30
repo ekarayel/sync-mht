@@ -33,9 +33,7 @@ data ClientServerOptions
       , cs_delete :: Bool
       , cs_ignore :: [FilePath]
       }
-      deriving (Generic, Show, Typeable)
-
-instance Serialize ClientServerOptions
+      deriving (Read, Show)
 
 data Request
     = QuerySet TrieLocation
@@ -55,9 +53,21 @@ data QueryFileResponse
 
 instance Serialize QueryFileResponse
 
-data Side
-    = Service FilePath ClientServerOptions
-    | Client FilePath ClientServerOptions
-    deriving (Show, Generic, Typeable)
+data ProtocolVersion
+    = Version1
+    deriving (Read, Show, Eq)
 
-instance Serialize Side
+thisProtocolVersion :: ProtocolVersion
+thisProtocolVersion = Version1
+
+data LaunchMessage
+    = LaunchMessage
+    { lm_protocolVersion :: ProtocolVersion
+    , lm_dir :: FilePath
+    , lm_side :: Side
+    , lm_clientServerOptions :: ClientServerOptions
+    }
+    deriving (Read, Show)
+
+data Side = Server | Client
+    deriving (Read, Show)
