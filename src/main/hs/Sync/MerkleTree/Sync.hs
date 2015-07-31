@@ -8,9 +8,12 @@ module Sync.MerkleTree.Sync
     , local
     , parent
     , openStreams
+    , mkChanStreams
+    , StreamPair(..)
     , Direction(..)
     ) where
 
+import Control.Concurrent(newChan)
 import Control.Monad
 import Control.Monad.State
 import Data.Monoid
@@ -24,6 +27,7 @@ import Data.ByteString(ByteString)
 import qualified Data.Serialize as SE
 import qualified Data.ByteString as BS
 import qualified System.IO.Streams as ST
+import qualified System.IO.Streams.Concurrent as ST
 
 import Sync.MerkleTree.Analyse
 import Sync.MerkleTree.CommTypes
@@ -43,6 +47,11 @@ openStreams hIn hOut =
        outStream <- ST.handleToOutputStream hOut
        return $ StreamPair { sp_in = inStream, sp_out = outStream }
 
+mkChanStreams :: IO (InputStream ByteString, OutputStream ByteString)
+mkChanStreams =
+    do chan <- newChan
+       liftM2 (,) (ST.chanToInput chan) (ST.chanToOutput chan)
+
 instance Protocol RequestMonad where
     queryHashReq = request . QueryHash
     querySetReq = request . QuerySet
@@ -61,10 +70,9 @@ data Direction
     = FromRemote
     | ToRemote
 
-child :: IO ()
-child =
-    do streams <- openStreams stdin stdout
-       launchMessage <- getFromInputStream (sp_in streams)
+child :: StreamPair -> IO ()
+child streams =
+    do launchMessage <- getFromInputStream (sp_in streams)
        serverOrClient (read launchMessage) streams
 
 parent :: StreamPair -> FilePath -> FilePath -> Direction -> ClientServerOptions -> IO ()

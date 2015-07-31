@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Sync.MerkleTree.Analyse
     ( analyseDirectory
+    , isRealFile
     ) where
 
 import Control.Monad
