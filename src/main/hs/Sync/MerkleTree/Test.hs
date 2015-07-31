@@ -113,9 +113,8 @@ testSync =
                           , so_help = False
                           , so_nonOptions = []
                           }
-                      True <- areDirsEqual (testDir </> "src") (testDir </> "target")
-                      True <- areDirsEqual (testDir </> "src") (testDir </> "src-backup")
-                      return ()
+                      areDirsEqual (testDir </> "src") (testDir </> "target")
+                      areDirsEqual (testDir </> "src") (testDir </> "src-backup")
            return TS.Pass
 
 data FileOrDir
@@ -148,23 +147,26 @@ mkRandomDir md fps =
                              setModificationTime (fp </> n) (utcTimeFrom d)
 
 
-areDirsEqual :: FilePath -> FilePath -> IO Bool
+areDirsEqual :: FilePath -> FilePath -> IO ()
 areDirsEqual fp1 fp2 =
    do files1 <- liftM (filter isRealFile) $ getDirectoryContents fp1
       files2 <- liftM (filter isRealFile) $ getDirectoryContents fp2
       case () of
-        () | files1 == files2 ->
-            liftM and $ forM files1 $ \f -> areEntriesEqual (fp1 </> f) (fp2 </> f)
-           | otherwise -> return False
+        () | files1 == files2 -> forM_ files1 $ \f -> areEntriesEqual (fp1 </> f) (fp2 </> f)
+           | otherwise -> fail $ "Unequal: " ++ show (fp1, fp2, files1, files2)
 
-areEntriesEqual :: FilePath -> FilePath -> IO Bool
+areEntriesEqual :: FilePath -> FilePath -> IO ()
 areEntriesEqual f1 f2 =
   do s1 <- getFileStatus f1
      s2 <- getFileStatus f2
      case () of
         () | isDirectory s1, isDirectory s2 -> areDirsEqual f1 f2
-           | isRegularFile s1, isRegularFile s2 -> liftM2 (==) (readFile f1) (readFile f2)
-           | otherwise -> return False
+           | isRegularFile s1, isRegularFile s2 ->
+               do c1 <- readFile f1
+                  c2 <- readFile f2
+                  unless (c1 == c2) $fail $ "Unequal files: " ++ show (f1, f2, c1, c2)
+           | otherwise ->
+               fail $ show (f1, f2, isDirectory s1, isDirectory s2, isRegularFile s1, isRegularFile s2)
 
 
 -- | @distinctNames k@ creates k distinct file names
