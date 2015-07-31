@@ -32,19 +32,16 @@ mkTestInstance name run = ti
 
 tests :: IO [TS.Test]
 tests = return $
-    [ TS.testGroup "all"
+    [ TS.testGroup "all" $
         [ TS.Test testOptions
-        , TS.Test testSync
-        ]
+        ] ++ (map TS.Test testSync)
     ]
 
 testOptions :: TS.TestInstance
-testOptions = mkTestInstance "testAdd" $
+testOptions = mkTestInstance "testOptions" $
     let prepare add update delete go =
             withSystemTempDirectory "sync-mht" $ \testDir ->
-                do putStrLn "testAdd"
-                   hPutStrLn stderr "testAdd"
-                   let srcDir = testDir </> "src"
+                do let srcDir = testDir </> "src"
                        destDir = testDir </> "dest"
                    createDirectory srcDir
                    createDirectory destDir
@@ -88,37 +85,38 @@ testOptions = mkTestInstance "testAdd" $
                  return ()
           return TS.Pass
 
-testSync :: TS.TestInstance
-testSync = mkTestInstance "testSync" $
-    do forM [ (i,s) | i <- [1..50], s <- [0,1,2] ] $ \(_,simulate) ->
-           withSystemTempDirectory "sync-mht" $ \testDir ->
-               do mkRandomDir 2 [testDir </> "src", testDir </> "src-backup"]
-                  mkRandomDir 2 [testDir </> "target"]
-                  let sourcePrefix
-                          | simulate == 1 = "remote:"
-                          | otherwise = ""
-                      targetPrefix
-                          | simulate == 2 = "remote:"
-                          | otherwise = ""
-                  run $
-                      SyncOptions
-                      { so_source = Just $ (sourcePrefix ++) testDir </> "src"
-                      , so_destination = Just $ (targetPrefix ++) testDir </> "target"
-                      , so_remote =
-                           case simulate of
-                             0 -> Nothing
-                             _ -> Just Simulate
-                      , so_ignore = []
-                      , so_add = True
-                      , so_update = True
-                      , so_delete = True
-                      , so_help = False
-                      , so_nonOptions = []
-                      }
-                  True <- areDirsEqual (testDir </> "src") (testDir </> "target")
-                  True <- areDirsEqual (testDir </> "src") (testDir </> "src-backup")
-                  return ()
-       return TS.Pass
+testSync :: [TS.TestInstance]
+testSync = 
+    flip map [0,1,2] $ \simulate -> mkTestInstance ("testSync"++ show simulate) $
+        do forM [1..50] $ \_ ->
+               withSystemTempDirectory "sync-mht" $ \testDir ->
+                   do mkRandomDir 2 [testDir </> "src", testDir </> "src-backup"]
+                      mkRandomDir 2 [testDir </> "target"]
+                      let sourcePrefix
+                              | simulate == 1 = "remote:"
+                              | otherwise = ""
+                          targetPrefix
+                              | simulate == 2 = "remote:"
+                              | otherwise = ""
+                      run $
+                          SyncOptions
+                          { so_source = Just $ (sourcePrefix ++) testDir </> "src"
+                          , so_destination = Just $ (targetPrefix ++) testDir </> "target"
+                          , so_remote =
+                               case simulate of
+                                 0 -> Nothing
+                                 _ -> Just Simulate
+                          , so_ignore = []
+                          , so_add = True
+                          , so_update = True
+                          , so_delete = True
+                          , so_help = False
+                          , so_nonOptions = []
+                          }
+                      True <- areDirsEqual (testDir </> "src") (testDir </> "target")
+                      True <- areDirsEqual (testDir </> "src") (testDir </> "src-backup")
+                      return ()
+           return TS.Pass
 
 data FileOrDir
     = File
