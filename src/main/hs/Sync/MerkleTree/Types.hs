@@ -60,12 +60,20 @@ instance SE.Serialize Path
 instance Ord Entry where
     compare = comparing withLevel
         where
-          level Root = 0 :: Int
-          level (Path _ p) = 1 + level p
-          withLevel entry =
+          withLevel entry = (levelOf entry, toEither entry)
+          toEither entry =
               case entry of
-                DirectoryEntry p -> (level p, Right p)
-                FileEntry f -> (level $ f_name f, Left f)
+                DirectoryEntry p -> Right p
+                FileEntry f -> Left f
+
+levelOf :: Entry -> Int
+levelOf e =
+    case e of
+      DirectoryEntry p -> level p
+      FileEntry f -> level $ f_name f
+    where
+      level Root = 0
+      level (Path _ p) = 1 + level p
 
 instance HasDigest Entry where
     digest = hash . SE.encode
@@ -76,4 +84,3 @@ data SerText = SerText { unSerText :: !T.Text }
 instance SE.Serialize SerText where
     get = SE.get >>= either (fail . show) (return . SerText) . TE.decodeUtf8'
     put = SE.put . TE.encodeUtf8 . unSerText
-

@@ -6,6 +6,7 @@ module Sync.MerkleTree.Client where
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Foldable(Foldable)
+import Data.Function
 import Data.Monoid(Monoid, mappend, mempty, Sum(..))
 import Data.Set(Set)
 import Data.List
@@ -49,6 +50,11 @@ logClient t =
     do True <- logReq $ SerText t
        return ()
 
+data SimpleEntry
+    = FileSimpleEntry Path
+    | DirectorySimpleEntry Path
+    deriving (Eq, Ord)
+
 analyseEntries :: Diff Entry -> ([Entry],[Entry],[Entry])
 analyseEntries (Diff obsoleteEntries newEntries) =
     (M.elems deleteMap, M.elems changeMap, M.elems newMap)
@@ -59,8 +65,8 @@ analyseEntries (Diff obsoleteEntries newEntries) =
       obsMap = M.fromList $ S.toList $ S.map keyValue obsoleteEntries
       updMap = M.fromList $ S.toList $ S.map keyValue newEntries
       keyValue x = (name x, x)
-      name (FileEntry f) = f_name f
-      name (DirectoryEntry f) = f
+      name (FileEntry f) = FileSimpleEntry $ f_name f
+      name (DirectoryEntry f) = DirectorySimpleEntry f
 
 abstractClient :: (ClientMonad m) => ClientServerOptions -> FilePath -> Trie Entry -> m ()
 abstractClient cs fp trie =
@@ -78,19 +84,24 @@ abstractClient cs fp trie =
                case e of
                  FileEntry f -> liftIO $ removeFile $ toFilePath fp $ f_name f
                  DirectoryEntry p -> liftIO $ removeDirectory $ toFilePath fp p
-       mapM_ (split . map (synchronizeNewOrChangedEntry fp))
-           $ splitEvery _CONCURRENT_FILETRANSFER_SIZE_ $ sort
-           $ [ e | cs_add cs, e <- newEntries ] ++ [ e | cs_update cs, e <- changedEntries ]
+       mapM_ (synchronizeNewOrChangedEntries fp)
+           $ groupBy ((==) `on` levelOf)
+           $ sort $ [ e | cs_add cs, e <- newEntries ] ++ [ e | cs_update cs, e <- changedEntries ]
        True <- terminateReq
        return ()
 
 _CONCURRENT_FILETRANSFER_SIZE_ :: Int
-_CONCURRENT_FILETRANSFER_SIZE_ = 96
+_CONCURRENT_FILETRANSFER_SIZE_ = 48
 
 splitEvery :: Int -> [a] -> [[a]]
 splitEvery n l
     | null l = []
     | (h,t) <- splitAt n l = h:(splitEvery n t)
+
+synchronizeNewOrChangedEntries :: (ClientMonad m) => FilePath -> [Entry] -> m ()
+synchronizeNewOrChangedEntries fp entries =
+    forM_ (splitEvery _CONCURRENT_FILETRANSFER_SIZE_ entries) $ \entryGroup ->
+        split $ map (synchronizeNewOrChangedEntry fp) entryGroup
 
 synchronizeNewOrChangedEntry :: (ClientMonad m) => FilePath -> Entry -> m ()
 synchronizeNewOrChangedEntry fp entry =
@@ -121,6 +132,3 @@ nodeReq (loc,trie) =
                 do s' <- querySetReq loc
                    let s = getAll trie
                    return $ Diff (s `S.difference` s') (s' `S.difference` s)
-
-
-

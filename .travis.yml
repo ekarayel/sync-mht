@@ -4,9 +4,11 @@ ghc:
 before_install:
 - chmod +x configure.hs
 - ./configure.hs
+- cabal install cabal-install
 before_deploy:
 - chmod +x configure.hs
 - ./configure.hs
+- cabal install cabal-install
 deploy:
   provider: hackage
   username: emink
