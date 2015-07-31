@@ -56,10 +56,12 @@ optDescriptions =
         "directory to copy files to (destination) (this option is required)"
     , Option ['r'] ["remote-shell"] (ReqArg (\s so -> so { so_remote = Just s }) "CMD")
         "synchroize with a remote-site using a remote command execution tool (like ssh or docker)"
-    , Option ['i'] ["ignore"] (ReqArg (\fp so -> so { so_ignore = fp:(so_ignore so) }) "PATH") ( concat
-        [ "files or directories (relative to the source and destination directories) that are to "
-        , "be ignored during synchroization (this option can be given multiple times)"
-        ])
+    , Option ['i'] ["ignore"] (ReqArg (\fp so -> so { so_ignore = fp:(so_ignore so) }) "PATH") $
+        concat
+        [ "regular expression for files or directories (relative to the source and destination "
+        , "directories) that are to be ignored during synchroization (this option can be given "
+        , " multiple times)"
+        ]
     , Option ['a'] ["add"] (NoArg (\so -> so { so_add = True })) ( concat
         [ "copy files from the source directory if there is corresponding file inside "
         , "the destination directory"
