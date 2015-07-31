@@ -149,8 +149,8 @@ mkRandomDir md fps =
 
 areDirsEqual :: FilePath -> FilePath -> IO ()
 areDirsEqual fp1 fp2 =
-   do files1 <- liftM (filter isRealFile) $ getDirectoryContents fp1
-      files2 <- liftM (filter isRealFile) $ getDirectoryContents fp2
+   do files1 <- liftM (sort . filter isRealFile) $ getDirectoryContents fp1
+      files2 <- liftM (sort . filter isRealFile) $ getDirectoryContents fp2
       case () of
         () | files1 == files2 -> forM_ files1 $ \f -> areEntriesEqual (fp1 </> f) (fp2 </> f)
            | otherwise -> fail $ "Unequal: " ++ show (fp1, fp2, files1, files2)
