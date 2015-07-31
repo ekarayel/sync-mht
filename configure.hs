@@ -11,7 +11,7 @@ main =
                , "        , unix >=2.7 && <2.8"
                , "        , directory >=1.2.3 && <1.3"
                , "        , filepath >=1.3 && <1.4"
-               , "        , process >=1.2 &&  <1.3"
+               , "        , process == 1.2.3.0"
                , "        , cryptohash >=0.11 && <0.12"
                , "        , exceptions >=0.7 && <0.8"
                , "        , byteable >=0.1 && <0.2"
@@ -25,7 +25,7 @@ main =
                , "        , transformers >= 0.3 && < 0.4"
                , "        , regex-compat >= 0.95 && < 0.96"
                , "        , mtl >= 2.1 && < 2.2"
-               , "        , Cabal >= 1.18 && <= 1.19"
+               , "        , Cabal >= 1.22 && < 1.23"
                , "        , time >= 1.4 && < 1.5"
                , "        , random >= 1.0 && < 1.1"
                , "        , temporary >= 1.2 && < 1.3"
@@ -38,7 +38,7 @@ main =
            ++ authorAndMaintainer "Emin Karayel <me@eminkarayel.de>" ++
            [ "category: Utility"
            , "extra-doc-files: " ++ "README.md"
-           , "cabal-version: >= 1.18"
+           , "cabal-version: >= 1.22"
            , "build-type: Simple"
            ] ++ gitHubDescription ++
            [ "test-suite main"
