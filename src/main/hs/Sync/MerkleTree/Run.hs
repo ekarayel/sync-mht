@@ -65,32 +65,21 @@ toClientServerOptions so =
 optDescriptions :: [OptDescr (SyncOptions -> SyncOptions)]
 optDescriptions =
     [ Option ['s'] ["source"] (ReqArg (\fp so -> so { so_source = Just fp }) "DIR")
-        "directory to copy files from (source) (this option is required)"
+        "source directory"
     , Option ['d'] ["destination"] (ReqArg (\fp so -> so { so_destination = Just fp }) "DIR")
-        "directory to copy files to (destination) (this option is required)"
+        "destination directory"
     , Option ['r'] ["remote-shell"] (ReqArg (\s so -> so { so_remote = Just $ RemoteCmd s }) "CMD")
-        "synchroize with a remote-site using a remote command execution tool (like ssh or docker)"
+        "synchroize with a remote-site (see below)"
     , Option ['i'] ["ignore"] (ReqArg (\fp so -> so { so_ignore = fp:(so_ignore so) }) "REGEX")
-        $ concat
-        [ "regular expression for files or directories (relative to the source and destination "
-        , "directories) that are to be ignored during synchroization (this option can be given "
-        , " multiple times)"
-        ]
+        "ignore entries matching the given regex"
     , Option ['b'] ["boring"] (ReqArg (\fp so -> so { so_boring = fp:(so_boring so) }) "PATH")
-        $ concat
-        [ "boring file - darcs format"
-        ]    , Option ['a'] ["add"] (NoArg (\so -> so { so_add = True })) ( concat
-        [ "copy files from the source directory if there is corresponding file inside "
-        , "the destination directory"
-        ])
-    , Option ['u'] ["update"] (NoArg (\so -> so { so_update = True })) ( concat
-        [ "overwrite existing files inside the destination directory if their content does not "
-        , "match the respective files inside the source directory"
-        ])
-    , Option [] ["delete"] (NoArg (\so -> so { so_delete = True })) ( concat
-        [ "delete files inside the destination directory if there is no corresponding file inside "
-        , "the source directory"
-        ])
+        "ignore entries matching the regexes in the given file"
+    , Option ['a'] ["add"] (NoArg (\so -> so { so_add = True }))
+        "copy additional files from the source directory"
+    , Option ['u'] ["update"] (NoArg (\so -> so { so_update = True }))
+        "overwrite existing files"
+    , Option [] ["delete"] (NoArg (\so -> so { so_delete = True }))
+        "delete superfluos files in the destination directory"
     , Option ['h'] ["help"] (NoArg (\so -> so { so_help = True })) "shows usage information"
     ]
 
@@ -110,14 +99,16 @@ printUsageInfo :: [String] -> IO ()
 printUsageInfo prefix = mapM_ putError (prefix ++ [usageInfo header optDescriptions] ++ [details])
     where
       header = unlines
-          [ "sync-mht version " ++ showVersion version
+          [ "Usage: sync-mht [OPTIONS..]"
           , ""
-          , "Usage: sync-mht [OPTIONS..]"
+          , "Fast incremental file transfer using Merkle-Hash-Trees (Version: "
+            ++ showVersion version ++ ")"
           ]
-      details = concat
-          [ "Note: If the --remote-shell option has been provided, exactly one of the directories "
-          , "must be prepended with 'remote:' - indicating a folder on the site, accessible with "
-          , "the provided remote shell command."
+      details = unlines
+          [ "Note: The argument to the --remote-shell option should be a CMD running sync-mht"
+          , "with a remote command execution tool (like ssh or docker). If given exactly one of"
+          , "the directories must be prepended with 'remote:' - indicating a folder on the site,"
+          , "accessible with the provided remote shell command."
           ]
 
 data Location
@@ -134,7 +125,7 @@ run so
     | so_help so =
         printUsageInfo []
     | not (null (so_nonOptions so)) =
-        printUsageInfo ["Could not understand the following options: " ++ show (so_nonOptions so)]
+        printUsageInfo ["Unrecognized options: " ++ intercalate ", " (so_nonOptions so)]
     | Just source <- so_source so, Just destination <- so_destination so =
         do cs <- toClientServerOptions so
            case (parseFilePath source, parseFilePath destination) of
@@ -154,7 +145,7 @@ run so
         do let missingOpts =
                 intercalate ", " $ map snd $ filter ((== Nothing) . ($ so) . fst)
                 [(so_source, "--source"),(so_destination, "--destination")]
-           printUsageInfo ["The follwing required options: " ++ missingOpts ++ " were missing."]
+           printUsageInfo ["The options " ++ missingOpts ++ " are required."]
     where
       doubleRemote = "Either the directory given in --source or --destination must be local."
       missingRemote = concat

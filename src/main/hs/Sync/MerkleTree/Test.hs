@@ -34,7 +34,7 @@ tests :: IO [TS.Test]
 tests = return $
     [ TS.testGroup "all" $ map TS.Test $
         [ testOptions ]
---        ++ testIgnoreBoring
+        ++ testIgnoreBoring
         ++ testSync
     ]
 
@@ -46,7 +46,7 @@ testIgnoreBoring =
                createDirectory srcDir
                createDirectory $ srcDir </> "a"
                createDirectory destDir
-               writeFile (srcDir </> ".boring") $ unlines $
+               writeFile (fp </> ".boring") $ unlines $
                    [ "#baz"
                    , ""
                    , "foo"
@@ -65,7 +65,7 @@ testIgnoreBoring =
                    , so_destination = Just $ destDir
                    , so_remote = Nothing
                    , so_ignore = ign
-                   , so_boring = bor
+                   , so_boring = map (const $ fp </> ".boring") bor
                    , so_add = True
                    , so_update = True
                    , so_delete = True
@@ -81,7 +81,7 @@ testIgnoreBoring =
                False <- doesFileExist (destDir </> "a" </> "foo")
                return TS.Pass
     in [ mkTestInstance "testIgnore" $ testCase ["foo","^bar"] []
-       , mkTestInstance "testBoring" $ testCase [] [".boring"]
+       , mkTestInstance "testBoring" $ testCase [] [()]
        ]
 
 testOptions :: TS.TestInstance
@@ -136,10 +136,10 @@ testOptions = mkTestInstance "testOptions" $
 testSync :: [TS.TestInstance]
 testSync =
     flip map [0,1,2] $ \simulate -> mkTestInstance ("testSync"++ show simulate) $
-        do forM [1..50] $ \_ ->
+        do forM [1..10] $ \_ ->
                withSystemTempDirectory "sync-mht" $ \testDir ->
-                   do mkRandomDir 2 [testDir </> "src", testDir </> "src-backup"]
-                      mkRandomDir 2 [testDir </> "target"]
+                   do mkRandomDir 3 [testDir </> "src", testDir </> "src-backup"]
+                      mkRandomDir 3 [testDir </> "target"]
                       let sourcePrefix
                               | simulate == 1 = "remote:"
                               | otherwise = ""
@@ -215,8 +215,8 @@ areEntriesEqual f1 f2 =
                   c2 <- readFile f2
                   unless (c1 == c2) $fail $ "Unequal files: " ++ show (f1, f2, c1, c2)
            | otherwise ->
-               fail $ show (f1, f2, isDirectory s1, isDirectory s2, isRegularFile s1, isRegularFile s2)
-
+               fail $ show
+                   (f1, f2, isDirectory s1, isDirectory s2, isRegularFile s1, isRegularFile s2)
 
 -- | @distinctNames k@ creates k distinct file names
 distinctNames :: Integer -> IO [String]
