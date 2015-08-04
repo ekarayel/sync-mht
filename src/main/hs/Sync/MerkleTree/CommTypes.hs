@@ -55,10 +55,11 @@ instance Serialize QueryFileResponse
 
 data ProtocolVersion
     = Version1
+    | Version2
     deriving (Read, Show, Eq)
 
 thisProtocolVersion :: ProtocolVersion
-thisProtocolVersion = Version1
+thisProtocolVersion = Version2
 
 data LaunchMessage
     = LaunchMessage

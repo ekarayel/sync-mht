@@ -102,7 +102,8 @@ printUsageInfo prefix = mapM_ putError (prefix ++ [usageInfo header optDescripti
           [ "Usage: sync-mht [OPTIONS..]"
           , ""
           , "Fast incremental file transfer using Merkle-Hash-Trees (Version: "
-            ++ showVersion version ++ ")"
+            ++ showVersion version
+            ++ ")"
           ]
       details = unlines
           [ "Note: The argument to the --remote-shell option should be a CMD running sync-mht"
@@ -161,19 +162,18 @@ runChild =
 
 runParent :: ClientServerOptions -> RemoteCmd -> FilePath -> FilePath -> Direction -> IO ()
 runParent clientServerOpts mRemoteCmd source destination dir =
-    case mRemoteCmd of
-      RemoteCmd remoteCmd ->
-          do let remoteCmd' = remoteCmd ++ " " ++ _HIDDENT_CLIENT_MODE_OPTION_
-             handles <-
-                 createProcess ((shell remoteCmd') { std_in = CreatePipe, std_out = CreatePipe })
-             case handles of
-               (Just hIn, Just hOut, Nothing, _ph) ->
-                   do streams <- openStreams hOut hIn
-                      parent streams source destination dir clientServerOpts
-               _ -> fail "createProcess did not return the correct set of handles."
-      Simulate ->
-          do (parentInStream, childOutStream) <- mkChanStreams
-             (childInStream, parentOutStream) <- mkChanStreams
-             _ <- forkIO $ child $ StreamPair { sp_in = childInStream, sp_out = childOutStream }
-             let parentStreams = StreamPair { sp_in = parentInStream, sp_out = parentOutStream }
-             parent parentStreams source destination dir clientServerOpts
+    do parentStreams <-
+           case mRemoteCmd of
+             RemoteCmd remoteCmd ->
+                 do let remoteCmd' = remoteCmd ++ " " ++ _HIDDENT_CLIENT_MODE_OPTION_
+                    handles <-
+                        createProcess $ (shell remoteCmd') { std_in = CreatePipe, std_out = CreatePipe }
+                    case handles of
+                      (Just hIn, Just hOut, Nothing, _ph) -> openStreams hOut hIn
+                      _ -> fail "createProcess did not return the correct set of handles."
+             Simulate ->
+                 do (parentInStream, childOutStream) <- mkChanStreams
+                    (childInStream, parentOutStream) <- mkChanStreams
+                    _ <- forkIO $ child $ StreamPair { sp_in = childInStream, sp_out = childOutStream }
+                    return $ StreamPair { sp_in = parentInStream, sp_out = parentOutStream }
+       parent parentStreams source destination dir clientServerOpts

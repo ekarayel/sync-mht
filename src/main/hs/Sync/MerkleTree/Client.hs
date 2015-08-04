@@ -5,6 +5,7 @@ module Sync.MerkleTree.Client where
 
 import Control.Monad
 import Control.Monad.IO.Class
+import Codec.Compression.Snappy
 import Data.Foldable(Foldable)
 import Data.Function
 import Data.Monoid(Monoid, mappend, mempty, Sum(..))
@@ -113,7 +114,8 @@ synchronizeNewOrChangedEntry fp entry =
                      case result of
                        Final -> return ()
                        ToBeContinued content contHandle ->
-                           (liftIO $ BS.hPut h content) >> queryFileContReq contHandle >>= loop
+                           do liftIO $ BS.hPut h $ decompress content
+                              queryFileContReq contHandle >>= loop
              loop firstResult
              liftIO $ hClose h
              let modTime = (CTime $ unModTime $ f_modtime f)
