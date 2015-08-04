@@ -5,7 +5,7 @@ module Sync.MerkleTree.Client where
 
 import Control.Monad
 import Control.Monad.IO.Class
-import Codec.Compression.Snappy
+import Codec.Compression.GZip
 import Data.Foldable(Foldable)
 import Data.Function
 import Data.Monoid(Monoid, mappend, mempty, Sum(..))
@@ -13,6 +13,7 @@ import Data.Set(Set)
 import Data.List
 import Foreign.C.Types
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BL
 import qualified Data.Foldable as F
 import qualified Data.Set as S
 import qualified Data.Map as M
@@ -114,7 +115,7 @@ synchronizeNewOrChangedEntry fp entry =
                      case result of
                        Final -> return ()
                        ToBeContinued content contHandle ->
-                           do liftIO $ BS.hPut h $ decompress content
+                           do liftIO $ BS.hPut h $ BL.toStrict $ decompress $ BL.fromStrict content
                               queryFileContReq contHandle >>= loop
              loop firstResult
              liftIO $ hClose h

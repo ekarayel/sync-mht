@@ -5,7 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Sync.MerkleTree.Server where
 
-import Codec.Compression.Snappy
+import Codec.Compression.GZip
 import Control.Monad.State
 import Sync.MerkleTree.CommTypes
 import Sync.MerkleTree.Trie
@@ -14,6 +14,7 @@ import Sync.MerkleTree.Types
 import qualified Data.Map as M
 import Data.Map(Map)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BL
 import System.IO
 
 data ServerState
@@ -59,4 +60,5 @@ withHandle h n =
              do liftIO $ hClose h
                 modify (\s -> s { st_handles = M.delete n (st_handles s) })
                 return $ Final
-            | otherwise -> return $ ToBeContinued (compress bs) $ ContHandle n
+            | otherwise ->
+                return $ ToBeContinued (BL.toStrict $ compress $ BL.fromStrict bs) $ ContHandle n
