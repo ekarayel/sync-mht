@@ -7,7 +7,6 @@ import Control.Monad
 import Data.List
 
 import System.Console.GetOpt
-import System.Environment
 import System.IO
 import System.IO.Error
 import System.Process
