@@ -1,0 +1,150 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE OverloadedStrings #-}
+module Sync.MerkleTree.Sync
+    ( child
+    , local
+    , parent
+    , openStreams
+    , mkChanStreams
+    , testOpenStreams
+    , StreamPair(..)
+    , Direction(..)
+    ) where
+
+import Control.Concurrent(newChan)
+import Control.Monad
+import Control.Monad.State
+import Data.Monoid
+import System.FilePath
+import Prelude hiding (lookup)
+import Sync.MerkleTree.Trie
+import Sync.MerkleTree.Types
+import System.IO
+import System.IO.Temp
+import System.IO.Streams(InputStream, OutputStream, connect)
+import Data.ByteString(ByteString)
+import qualified Data.Serialize as SE
+import qualified Data.ByteString as BS
+import qualified System.IO.Streams as ST
+import qualified System.IO.Streams.Concurrent as ST
+import qualified Test.HUnit as H
+
+import Sync.MerkleTree.Analyse
+import Sync.MerkleTree.CommTypes
+import Sync.MerkleTree.Client
+import Sync.MerkleTree.Server
+import Sync.MerkleTree.Util.RequestMonad
+import Sync.MerkleTree.Util.GetFromInputStream
+
+data StreamPair
+    = StreamPair
+    { sp_in :: InputStream ByteString
+    , sp_out :: OutputStream ByteString
+    }
+
+openStreams :: Handle -> Handle -> IO StreamPair
+openStreams hIn hOut =
+    do inStream <- ST.handleToInputStream hIn
+       outStream <- ST.handleToOutputStream hOut
+       return $ StreamPair { sp_in = inStream, sp_out = outStream }
+
+mkChanStreams :: IO (InputStream ByteString, OutputStream ByteString)
+mkChanStreams =
+    do chan <- newChan
+       liftM2 (,) (ST.chanToInput chan) (ST.chanToOutput chan)
+
+instance Protocol RequestMonad where
+    queryHashReq = request . QueryHash
+    querySetReq = request . QuerySet
+    queryFileReq = request . QueryFile
+    queryFileContReq = request . QueryFileCont
+    logReq = request . Log
+    terminateReq = request Terminate
+
+instance ClientMonad RequestMonad where
+    split = splitRequests
+
+instance ClientMonad ServerMonad where
+    split xs = liftM mconcat $ sequence xs
+
+data Direction
+    = FromRemote
+    | ToRemote
+
+child :: StreamPair -> IO ()
+child streams =
+    do launchMessage <- getFromInputStream (sp_in streams)
+       serverOrClient (read launchMessage) streams
+
+parent :: StreamPair -> FilePath -> FilePath -> Direction -> ClientServerOptions -> IO ()
+parent streams source destination direction clientServerOpts =
+    case direction of
+      FromRemote ->
+        do respond (sp_out streams) $ show $ mkLaunchMessage Server source
+           serverOrClient (mkLaunchMessage Client destination) streams
+      ToRemote ->
+        do respond (sp_out streams) $ show $ mkLaunchMessage Client destination
+           serverOrClient (mkLaunchMessage Server source) streams
+    where
+      mkLaunchMessage side dir =
+          LaunchMessage
+          { lm_dir = dir
+          , lm_clientServerOptions = clientServerOpts
+          , lm_protocolVersion = thisProtocolVersion
+          , lm_side = side
+          }
+
+respond :: (SE.Serialize a) => OutputStream ByteString -> a -> IO ()
+respond os = mapM_ (flip ST.write os . Just) . (:[BS.empty]) . SE.encode
+
+local :: ClientServerOptions -> FilePath -> FilePath -> IO ()
+local cs source destination =
+    do sourceDir <- liftM (mkTrie 0) $ analyse source (cs_ignore cs)
+       destinationDir <- liftM (mkTrie 0) $ analyse destination (cs_ignore cs)
+       evalStateT (abstractClient cs destination destinationDir) (startServerState source sourceDir)
+
+serverOrClient :: LaunchMessage -> StreamPair -> IO ()
+serverOrClient lm streams
+    | lm_protocolVersion lm == thisProtocolVersion =
+        let side =
+                case lm_side lm of
+                  Server -> server
+                  Client -> client (lm_clientServerOptions lm)
+        in do entries <- analyse (lm_dir lm) (cs_ignore $ lm_clientServerOptions lm)
+              side entries (lm_dir lm) streams
+    | otherwise = fail "Incompatible sync-mht versions."
+
+server :: [Entry] -> FilePath -> StreamPair -> IO ()
+server entries fp streams = evalStateT loop (startServerState fp $ mkTrie 0 entries)
+    where
+       serverRespond = liftIO . respond (sp_out streams)
+       loop =
+           do req <- liftIO $ getFromInputStream (sp_in streams)
+              case req of
+                QueryHash l -> queryHashReq l >>= serverRespond >> loop
+                QuerySet l -> querySetReq l >>= serverRespond >> loop
+                QueryFile f -> queryFileReq f >>= serverRespond >> loop
+                QueryFileCont c -> queryFileContReq c >>= serverRespond >> loop
+                Log t -> logReq t >>= serverRespond >> loop
+                Terminate -> terminateReq >>= serverRespond
+
+client :: ClientServerOptions -> [Entry] -> FilePath -> StreamPair -> IO ()
+client cs entries fp streams =
+    runRequestMonad (sp_in streams) (sp_out streams) $ abstractClient cs fp $ mkTrie 0 entries
+
+testOpenStreams :: H.Test
+testOpenStreams = H.TestLabel "testOpenStreams" $ H.TestCase $
+    withSystemTempDirectory "testStreams" $ \dir ->
+        do let testStr = "31456"
+           writeFile (dir </> "read.in") testStr
+           hIn <- openFile (dir </> "read.in") ReadMode
+           hOut <- openFile (dir </> "write.out") WriteMode
+           st <- openStreams hIn hOut
+           connect (sp_in st) (sp_out st)
+           hClose hIn
+           hClose hOut
+           got <- readFile (dir </> "write.out")
+           testStr H.@=? got
