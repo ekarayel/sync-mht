@@ -1,7 +1,7 @@
 # sync-mht
 
 [![Build Status](https://travis-ci.org/ekarayel/sync-mht.svg?branch=master)](https://travis-ci.org/ekarayel/sync-mht)
-
+[![codecov.io](http://codecov.io/github/ekarayel/sync-mht/coverage.svg?branch=master)](http://codecov.io/github/ekarayel/sync-mht?branch=master)
 ## Synopsis
 Fast incremental file transfer using Merkle-Hash-Trees
 
