@@ -39,7 +39,7 @@ main =
            ++ authorAndMaintainer "Emin Karayel <me@eminkarayel.de>" ++
            [ "category: Utility"
            , "extra-doc-files: " ++ "README.md"
-           , "cabal-version: >= 1.22"
+           , "cabal-version: >= 1.18"
            , "build-type: Simple"
            ] ++ gitHubDescription ++
            [ "test-suite main"
@@ -72,7 +72,7 @@ main =
            , "        Sync.MerkleTree.Trie"
            , "        Sync.MerkleTree.Types"
            , "        Sync.MerkleTree.Util.RequestMonad"
-           , "        Sync.MerkleTree.Util.GetFromInputStream"           
+           , "        Sync.MerkleTree.Util.GetFromInputStream"
            , "    ghc-options: -Wall"
            ] ++ buildDepends ++
            [ "    hs-source-dirs: src"
