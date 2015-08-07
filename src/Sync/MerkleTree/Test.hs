@@ -63,15 +63,14 @@ testIgnoreBoring =
                    , so_update = True
                    , so_delete = True
                    }
-               True <- liftM (=="testA") $ readFile (destDir </> "added.txt")
-               True <- liftM (=="testB") $ readFile (destDir </> "added-bar.txt")
-               True <- liftM (=="testC") $ readFile (destDir </> "baz")
-               False <- doesFileExist (destDir </> "bar-ignore.txt")
-               True <- liftM (=="testE") $ readFile (destDir </> "a" </> "bar")
-               False <- doesFileExist (destDir </> "some-foo.txt")
-               False <- doesFileExist (destDir </> "a" </> "foo")
-               False <- doesDirectoryExist $ destDir </> "with-foo"
-               return ()
+               readFile (destDir </> "added.txt") >>= ("testA" H.@=?)
+               readFile (destDir </> "added-bar.txt") >>= ("testB" H.@=?)
+               readFile (destDir </> "baz") >>= ("testC" H.@=?)
+               doesFileExist (destDir </> "bar-ignore.txt") >>= (False H.@=?)
+               readFile (destDir </> "a" </> "bar") >>= ("testE" H.@=?)
+               doesFileExist (destDir </> "some-foo.txt") >>= (False H.@=?)
+               doesFileExist (destDir </> "a" </> "foo") >>= (False H.@=?)
+               (doesDirectoryExist $ destDir </> "with-foo") >>= (False H.@=?)
     in H.TestList
         [ H.TestLabel "testIgnore" $ H.TestCase $ testCase ["foo","^bar"] []
         , H.TestLabel "testBoring" $ H.TestCase $ testCase [] [()]
@@ -92,8 +91,8 @@ testBigFile = H.TestLabel "testBigFile" $ H.TestCase $
                , so_destination = Just $ destDir
                , so_add = True
                }
-           True <- liftM (== data_) (readFile $ destDir </> "new.txt")
-           return ()
+           dataNew <- readFile $ destDir </> "new.txt"
+           data_ H.@=? dataNew
 
 testCmdLine :: H.Test
 testCmdLine = H.TestLabel "testCmdLine" $ H.TestCase $
@@ -122,8 +121,7 @@ testCmdLineFail = H.TestLabel "testCmdLineFail" $ H.TestCase $
            main "" ["-s",srcDir,"-d","remote:"++destDir,"-r","exit 0"]
            main "" ["-foobar"]
            main "" ["--help"]
-           got <- doesFileExist $ destDir </> "new.txt"
-           False H.@=? got
+           (doesFileExist $ destDir </> "new.txt") >>= (False H.@=?)
 
 testHelp :: H.Test
 testHelp = H.TestLabel "testHelp" $ H.TestCase $
@@ -155,8 +153,7 @@ testHelp = H.TestLabel "testHelp" $ H.TestCase $
                  , so_destination = Just $ "remote:" ++ destDir
                  , so_remote = Just $ RemoteCmd "/bin/true"
                  } ]
-           False <- doesFileExist (destDir </> "new.txt")
-           return ()
+           (doesFileExist $ destDir </> "new.txt") >>= (False H.@=?)
 
 testExit :: H.Test
 testExit = H.TestLabel "testExit" $ H.TestCase $
@@ -167,7 +164,7 @@ testExit = H.TestLabel "testExit" $ H.TestCase $
            createDirectory srcDir
            createDirectory destDir
            writeFile (srcDir </> "new.txt") data_
-           True <- (flip catchIOError) (\_ -> return True) $
+           res <- (flip catchIOError) (\_ -> return True) $
                do run "" $ defaultSyncOptions
                         { so_source = Just $ "remote:" ++ srcDir
                         , so_destination = Just $ destDir
@@ -175,7 +172,7 @@ testExit = H.TestLabel "testExit" $ H.TestCase $
                         , so_add = True
                         }
                   return False
-           return ()
+           True H.@=? res
 
 testOptions :: H.Test
 testOptions = H.TestLabel "testOptions" $ H.TestCase $
@@ -207,23 +204,20 @@ testOptions = H.TestLabel "testOptions" $ H.TestCase $
                    True <- liftM (=="test") $ readFile (srcDir </> "same.txt")
                    True <- liftM (=="test") $ readFile (srcDir </> "changed.txt")
                    True <- liftM (=="test") $ readFile (srcDir </> "added.txt")
-                   go srcDir destDir
-    in do prepare True False False $ \srcDir destDir ->
-              do True <- liftM (=="test") $ readFile (destDir </> "same.txt")
-                 True <- liftM (=="testB") $ readFile (destDir </> "changed.txt")
-                 True <- liftM (=="test") $ readFile (destDir </> "added.txt")
-                 True <- liftM (=="testB") $ readFile (destDir </> "deleted.txt")
-                 return ()
-          prepare False True False $ \srcDir destDir ->
-              do True <- liftM (=="test") $ readFile (destDir </> "same.txt")
-                 True <- liftM (=="test") $ readFile (destDir </> "changed.txt")
-                 True <- liftM (=="testB") $ readFile (destDir </> "deleted.txt")
-                 return ()
-          prepare False False True $ \srcDir destDir ->
-              do True <- liftM (=="test") $ readFile (destDir </> "same.txt")
-                 True <- liftM (=="testB") $ readFile (destDir </> "changed.txt")
-                 False <- doesFileExist (destDir </> "deleted.txt")
-                 return ()
+                   go destDir
+    in do prepare True False False $ \destDir ->
+              do readFile (destDir </> "same.txt") >>= ("test" H.@=?)
+                 readFile (destDir </> "changed.txt") >>= ("testB" H.@=?)
+                 readFile (destDir </> "added.txt") >>= ("test" H.@=?)
+                 readFile (destDir </> "deleted.txt") >>= ("testB" H.@=?)
+          prepare False True False $ \destDir ->
+              do readFile (destDir </> "same.txt") >>= ("test" H.@=?)
+                 readFile (destDir </> "changed.txt") >>= ("test" H.@=?)
+                 readFile (destDir </> "deleted.txt") >>= ("testB" H.@=?)
+          prepare False False True $ \destDir ->
+              do readFile (destDir </> "same.txt") >>= ("test" H.@=?)
+                 readFile (destDir </> "changed.txt") >>= ("testB" H.@=?)
+                 doesFileExist (destDir </> "deleted.txt") >>= (False H.@=?)
 
 testSync :: H.Test
 testSync =
