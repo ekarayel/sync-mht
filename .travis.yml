@@ -1,8 +1,8 @@
 language: haskell
+env:
+  secure: PxRsBm8kl7M0JBRGQ1wgtclRvz++CmpuvNmc4Reu677NCeqTaZ4Pdu0ZOXDWnqcPGbymKXp0/AGyLGV+aPCJ8lQ1aVrf/yj8UjDtvh3dZwU19SWvas6RHZ6ennWYnCwWVN5cQ8jGzB7OSFKXUhtM4qJh74gWQC+vmXdBNzi41Lt0NguFlsZUJt4Bv7r4vjhoD0DLsXaA1Ah5M8bbf/caq4pgTRx55+/wAxN9A8repXPWbZZ2ZUAEEyVoEqvJUboyhI8XzbjrNRpER6nkLyX362ZRTLbUsqwyfCOKZj/sjuFMv7ZEhWXoXdkZEnuDECOCQnhmsxTrxkmcqCAe2o6mnCijnqb5tvVhoa1V4l0UoHtcpwIXq6ESw5KPtKHkimIwR+SKX04zZ1cLFsZNzBNg70ZDSfjnsUYWpJhS0KeJoeHK4/oB56VGPzmgar5rnFTEMqBjZ1ntdYnhsgu4Y/fAUtBfAm1JuxJGM5oww0pLVRzB0vIXOasj9n3iW6OWn4Ps4lMiI3AT/oiyIzjVs7MiyjIyQjEFcgLthkVpDcDx4PviahDT69+c/q7yivNov0c7dSaUW0d6VE4gM9NJI4EO94DEsdjxTxNkYTW4zi+IDyKl7nfPcAgAXHwfnHnxiBUraWyjtmZo7s2KUzXcG1QXvrgmnEMuWKrGNUMpTPyjOJM=
 ghc:
 - 7.8
-env:
-   secure: "oP0m1VyyU1YFimnzAt1r3hljj6+UcMhJKaU/sRbdzFbAjivM693kGVk+AYJTM77/EAthKLNZhrk76Gg+8/4H7YS/v33UOc07AY7qemM2Cx48F6hroEAotB3FhkKd/DxZPisyiu4yNF5UDzMsOgaP6vg5gay/Ce4A5ucXekqTwbGjOGIQ+in/CKArmJOl0eF8U/0ow6Xyc9CH6USgJG9Lv1hM028e54Wv/f29dZbosxR1ys53HI4YW6wCBbLPurkQO0hb+e5Xrp3aFsueFSV2pKAsmrQB+/QIARBVy/k1Lwb5b7C+fFIg7u6yB31/+l4dVJGWUZbSWw15M6OwqrrogrIrkAKU4vjwdh3KzRcdSFG1ivCwBQMClzC6t7E9MwZcFmnfcjYxj7FjdO1Ca5iBlWQt3++94j6LXPUivDF2Eip0eqfGK7wDVsoWzkzbdqOemJOg1gJG5M++MAQX00/3qSycEvCMY1wgOSKln/15bksvNoLiAUJCtPWw2qAX6JDPzxprJvPw/JGkqHnrpj94zZHHG0kRKxswmSOCwWl9SxUUXJ2yDVhd24WlnZzYvLmVB6hbKjFUTtjVjziqlt9BmBGHNkxGPOglPFwPE+nDRe2ZqHqZLJBVYcmacijFw5xOBEPtTcfjKKS22IgMhGypNlfalt8Q+qcHpfdsbk0DK/M="
 before_install:
 - chmod +x configure.hs
 - ./configure.hs
@@ -11,7 +11,7 @@ script:
 after_script:
 - mkdir codecov && cd codecov && cabal sandbox init && cabal install codecov-haskell && cd ..
 - mv dist/hpc/vanilla/* dist/hpc/
-- codecov/.cabal-sandbox/bin/codecov-haskell main --token=$CODECOV_TOKEN
+- codecov/.cabal-sandbox/bin/codecov-haskell main --token=$CODECOV_TOKEN 2>&1 | grep -v $CODECOV_TOKEN
 before_deploy:
 - chmod +x configure.hs
 - ./configure.hs
