@@ -156,13 +156,12 @@ newtype TestDigest = TestDigest { unTestDigest :: T.Text }
 instance HasDigest TestDigest where
     digest = hashSHA256 . TE.encodeUtf8 . unTestDigest
 
-testLookup :: H.Test
-testLookup = H.TestList $
+tests :: H.Test
+tests = H.TestList $
     [ H.TestLabel "trieLookup"
         $ (Nothing H.~=? (lookup t (TrieLocation { tl_level = -1, tl_index = 0 })))
     , H.TestLabel "trieLookupTooDeep"
         $ (Nothing H.~=? (lookup t (TrieLocation { tl_level = 4, tl_index = 0 })))
-    , H.TestLabel "show" $ True H.~=? (0 <= (length $ show t))
     ]
     where
       t = mkTrie 0 $ map (TestDigest . T.pack . show) [0..(13+2*degree*degree)]

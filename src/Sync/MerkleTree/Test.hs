@@ -9,8 +9,6 @@ import Data.Time.Clock
 import Sync.MerkleTree.Analyse
 import Sync.MerkleTree.Run
 import Sync.MerkleTree.Client
-import Sync.MerkleTree.Sync
-import Sync.MerkleTree.Trie
 import System.Directory
 import System.FilePath
 import System.IO
@@ -24,8 +22,6 @@ tests :: H.Test
 tests = H.TestList $
     [ testOptions
     , testBigFile
-    , testLookup
-    , testOpenStreams
     , testHelp
     , testCmdLine
     , testCmdLineFail
@@ -245,20 +241,23 @@ testSync =
                    targetPrefix
                        | simulate == 2 = "remote:"
                        | otherwise = ""
-               run "" $
-                   defaultSyncOptions
-                   { so_source = Just $ (sourcePrefix ++) testDir </> "src"
-                   , so_destination = Just $ (targetPrefix ++) testDir </> "target"
-                   , so_remote =
-                        case simulate of
-                          0 -> Nothing
-                          _ -> Just Simulate
-                   , so_add = True
-                   , so_update = True
-                   , so_delete = True
-                   }
+               let cmd = run "" $
+                       defaultSyncOptions
+                       { so_source = Just $ (sourcePrefix ++) testDir </> "src"
+                       , so_destination = Just $ (targetPrefix ++) testDir </> "target"
+                       , so_remote =
+                            case simulate of
+                              0 -> Nothing
+                              _ -> Just Simulate
+                       , so_add = True
+                       , so_update = True
+                       , so_delete = True
+                       }
+               cmd
                areDirsEqual (testDir </> "src") (testDir </> "target")
                areDirsEqual (testDir </> "src") (testDir </> "src-backup")
+               cmd
+               areDirsEqual (testDir </> "target") (testDir </> "src-backup")
 
 utcTimeFrom :: Integer -> UTCTime
 utcTimeFrom x = UTCTime (fromGregorian 2015 07 29) (fromInteger x)

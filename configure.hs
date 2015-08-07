@@ -56,6 +56,7 @@ main =
            , "        Sync.MerkleTree.Test"
            , "        Sync.MerkleTree.Types"
            , "        Sync.MerkleTree.Util.RequestMonad"
+           , "        Sync.MerkleTree.Util.GetFromInputStream"
            ] ++ buildDepends ++
            [ "    hs-source-dirs: src"
            , "    default-language: Haskell2010"
@@ -71,6 +72,7 @@ main =
            , "        Sync.MerkleTree.Trie"
            , "        Sync.MerkleTree.Types"
            , "        Sync.MerkleTree.Util.RequestMonad"
+           , "        Sync.MerkleTree.Util.GetFromInputStream"           
            , "    ghc-options: -Wall"
            ] ++ buildDepends ++
            [ "    hs-source-dirs: src"
