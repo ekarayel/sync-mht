@@ -76,7 +76,7 @@ testBigFile = H.TestLabel "testBigFile" $ H.TestCase $
     withSystemTempDirectory "sync-mht" $ \testDir ->
         do let srcDir = testDir </> "src"
                destDir = testDir </> "dest"
-               data_ = show [1..(2^24)]
+               data_ = show [1..(2^20)]
            createDirectory srcDir
            createDirectory destDir
            writeFile (srcDir </> "new.txt") data_
