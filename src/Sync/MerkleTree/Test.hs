@@ -48,7 +48,7 @@ testIgnoreBoring =
                writeFile (srcDir </> "a" </> "bar") "testE"
                writeFile (srcDir </> "some-foo.txt") "testF"
                writeFile (srcDir </> "a" </> "foo") "testG"
-               run "" $
+               runSync $
                    defaultSyncOptions
                    { so_source = Just $ srcDir
                    , so_destination = Just $ destDir
@@ -76,11 +76,11 @@ testBigFile = H.TestLabel "testBigFile" $ H.TestCase $
     withSystemTempDirectory "sync-mht" $ \testDir ->
         do let srcDir = testDir </> "src"
                destDir = testDir </> "dest"
-               data_ = show [1..(2^17)]
+               data_ = show [1..(2^24)]
            createDirectory srcDir
            createDirectory destDir
            writeFile (srcDir </> "new.txt") data_
-           run "" $
+           runSync $
                defaultSyncOptions
                { so_source = Just $ srcDir
                , so_destination = Just $ destDir
@@ -100,7 +100,7 @@ testCmdLine = H.TestLabel "testCmdLine" $ H.TestCase $
            createDirectory destDir
            writeFile boringFile "$bar^"
            writeFile (srcDir </> "new.txt") expected
-           main "" ["-s",srcDir,"-d",destDir,"-a","-u","--delete","-i","$foo^","-b",boringFile]
+           runMain ["-s",srcDir,"-d",destDir,"-a","-u","--delete","-i","$foo^","-b",boringFile]
            got <- readFile  $ destDir </> "new.txt"
            expected H.@=? got
 
@@ -113,11 +113,18 @@ testCmdLineFail = H.TestLabel "testCmdLineFail" $ H.TestCase $
            createDirectory srcDir
            createDirectory destDir
            writeFile (srcDir </> "new.txt") expected
-           main "" ["-s",srcDir,"-d",destDir,"foo","bar"]
-           main "" ["-s",srcDir,"-d","remote:"++destDir,"-r","exit 0"]
-           main "" ["-foobar"]
-           main "" ["--help"]
+           runMain ["-s",srcDir,"-d",destDir,"foo","bar"]
+           runMain ["-s",srcDir,"-d","remote:"++destDir,"-r","exit 0"]
+           runMain ["-foobar"]
+           runMain ["--help"]
+           runMain ["-s",srcDir,"-d",destDir]
            (doesFileExist $ destDir </> "new.txt") >>= (False H.@=?)
+
+runMain :: [String] -> IO ()
+runMain = main ""
+
+runSync :: SyncOptions -> IO ()
+runSync = run ""
 
 testHelp :: H.Test
 testHelp = H.TestLabel "testHelp" $ H.TestCase $
@@ -134,7 +141,7 @@ testHelp = H.TestLabel "testHelp" $ H.TestCase $
            createDirectory srcDir
            createDirectory destDir
            writeFile (srcDir </> "new.txt") data_
-           mapM (run "") $
+           mapM (runSync) $
                [ syncOpts { so_nonOptions = ["foo", "bar"] }
                , syncOpts { so_source = Just $ "remote:" ++ srcDir }
                , syncOpts { so_source = Nothing }
@@ -161,7 +168,7 @@ testExit = H.TestLabel "testExit" $ H.TestCase $
            createDirectory destDir
            writeFile (srcDir </> "new.txt") data_
            res <- (flip catchIOError) (\_ -> return True) $
-               do run "" $ defaultSyncOptions
+               do runSync $ defaultSyncOptions
                         { so_source = Just $ "remote:" ++ srcDir
                         , so_destination = Just $ destDir
                         , so_remote = Just $ RemoteCmd "exit"
@@ -184,7 +191,7 @@ testOptions = H.TestLabel "testOptions" $ H.TestCase $
                    writeFile (destDir </> "changed.txt") "testB"
                    writeFile (srcDir </> "added.txt") "test"
                    writeFile (destDir </> "deleted.txt") "testB"
-                   run "" $
+                   runSync $
                        defaultSyncOptions
                        { so_source = Just $ srcDir
                        , so_destination = Just $ destDir
@@ -226,7 +233,7 @@ testSync =
                    targetPrefix
                        | simulate == 2 = "remote:"
                        | otherwise = ""
-               let cmd = run "" $
+               let cmd = runSync $
                        defaultSyncOptions
                        { so_source = Just $ (sourcePrefix ++) testDir </> "src"
                        , so_destination = Just $ (targetPrefix ++) testDir </> "target"
