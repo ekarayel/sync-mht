@@ -174,11 +174,18 @@ runParent clientServerOpts mRemoteCmd source destination dir =
              RemoteCmd remoteCmd ->
                  do let remoteCmd' = remoteCmd ++ " " ++ _HIDDENT_CLIENT_MODE_OPTION_
                     (Just hIn, Just hOut, Nothing, _ph) <-
-                        createProcess $ (shell remoteCmd') { std_in = CreatePipe, std_out = CreatePipe }
+                        createProcess $ (shell remoteCmd')
+                        { std_in = CreatePipe
+                        , std_out = CreatePipe
+                        }
                     openStreams hOut hIn
              Simulate ->
                  do (parentInStream, childOutStream) <- mkChanStreams
                     (childInStream, parentOutStream) <- mkChanStreams
-                    _ <- forkIO $ child $ StreamPair { sp_in = childInStream, sp_out = childOutStream }
+                    _ <- forkIO $ child $
+                        StreamPair
+                        { sp_in = childInStream
+                        , sp_out = childOutStream 
+                        }
                     return $ StreamPair { sp_in = parentInStream, sp_out = parentOutStream }
        parent parentStreams source destination dir clientServerOpts

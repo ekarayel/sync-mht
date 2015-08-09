@@ -22,13 +22,11 @@ data Hash = Hash { unHash :: BS.ByteString }
     deriving (Eq, Generic)
 
 instance Show Hash where
-    showsPrec i x = showsPrec i (go x)
-        where
-          go :: Hash -> String
-          go (Hash dig) = T.unpack $ TE.decodeUtf8 $ B16.encode dig
+    showsPrec _ x = ((T.unpack $ TE.decodeUtf8 $ B16.encode $ unHash x) ++)
 
 instance SE.Serialize Hash
 
+-- Abstract Merkle Hash Trie
 data Trie a
     = Trie
       { t_hash :: !Hash
@@ -45,10 +43,11 @@ data NodeType = NodeType | LeaveType
     deriving (Eq, Generic)
 instance SE.Serialize NodeType
 
+-- Location in the Merkle Hash Trie
 data TrieLocation
     = TrieLocation
-    { tl_level :: Int
-    , tl_index :: Int
+    { tl_level :: Int -- ^ Must be nonnegative
+    , tl_index :: Int -- ^ Must be between nonnegative and smaller than (degree^tl_level)
     }
     deriving (Generic)
 
@@ -60,6 +59,8 @@ degree = 64
 class HasDigest a where
     digest :: a -> Digest SHA256
 
+-- | Fingerprint of a Merkle-Hash-Tree node
+-- We asssume the Tree below a node is identical while synchronizing if its FingerPrint is
 data Fingerprint
     = Fingerprint
       { f_hash :: Hash
@@ -77,6 +78,7 @@ toFingerprint (Trie h node) = Fingerprint h nodeType
              Node _ -> NodeType
              Leave _ -> LeaveType
 
+-- | Creates a Merkle-Hash-Tree for a list of elements
 mkTrie :: (Ord a, HasDigest a) => Int -> [a] -> Trie a
 mkTrie i ls
     | length ls < degree = mkLeave ls
@@ -99,6 +101,8 @@ hashSHA256 = hash
 combineHash :: [Hash] -> Hash
 combineHash = Hash . toBytes . hashSHA256 . BS.concat . map unHash
 
+-- | The function @groupOf x@ eeturns a value between 0 to degree-1 for a digest with the property
+-- that @groupOf@ forms an approximate unviversal hash familiy.
 groupOf :: (HasDigest a) => Int -> a -> Int
 groupOf i x = fromInteger $ toInteger $ (h0 `mod` (fromInteger $ toInteger degree))
      where

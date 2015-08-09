@@ -5,7 +5,7 @@ import System.FilePath
 main :: IO ()
 main =
     do let name = "sync-mht"
-           buildDepends =
+           buildParams =
                [ "    build-depends: "
                , "        base >=4.7 && <4.8"
                , "        , unix >=2.7 && <2.8"
@@ -30,6 +30,20 @@ main =
                , "        , random >= 1.0 && < 1.1"
                , "        , HUnit >= 1.2 && < 1.3"
                , "        , temporary >= 1.2 && < 1.3"
+               , "    hs-source-dirs: src"
+               , "    default-language: Haskell2010"
+               ]
+           modules =
+               [ "        Sync.MerkleTree.Analyse"
+               , "        Sync.MerkleTree.Client"
+               , "        Sync.MerkleTree.CommTypes"
+               , "        Sync.MerkleTree.Server"
+               , "        Sync.MerkleTree.Sync"
+               , "        Sync.MerkleTree.Run"
+               , "        Sync.MerkleTree.Trie"
+               , "        Sync.MerkleTree.Types"
+               , "        Sync.MerkleTree.Util.RequestMonad"
+               , "        Sync.MerkleTree.Util.GetFromInputStream"
                ]
        gitHubDescription <- gitHubProject $ "https://github.com/ekarayel/" ++ name
        writeFile (name <.> "cabal") $ unlines $
@@ -46,50 +60,17 @@ main =
            , "    type: exitcode-stdio-1.0"
            , "    main-is: Test.hs"
            , "    other-modules:"
-           , "        Sync.MerkleTree.Analyse"
-           , "        Sync.MerkleTree.Client"
-           , "        Sync.MerkleTree.CommTypes"
-           , "        Sync.MerkleTree.Server"
-           , "        Sync.MerkleTree.Sync"
-           , "        Sync.MerkleTree.Run"
-           , "        Sync.MerkleTree.Trie"
-           , "        Sync.MerkleTree.Test"
-           , "        Sync.MerkleTree.Types"
-           , "        Sync.MerkleTree.Util.RequestMonad"
-           , "        Sync.MerkleTree.Util.GetFromInputStream"
-           ] ++ buildDepends ++
-           [ "    hs-source-dirs: src"
-           , "    default-language: Haskell2010"
-           , "executable sync-mht"
+           ] ++ modules ++
+           [ "        Sync.MerkleTree.Test"
+           ] ++ buildParams ++
+           [ "executable sync-mht"
            , "    main-is: Main.hs"
            , "    other-modules:"
-           , "        Sync.MerkleTree.Analyse"
-           , "        Sync.MerkleTree.Client"
-           , "        Sync.MerkleTree.CommTypes"
-           , "        Sync.MerkleTree.Server"
-           , "        Sync.MerkleTree.Sync"
-           , "        Sync.MerkleTree.Run"
-           , "        Sync.MerkleTree.Trie"
-           , "        Sync.MerkleTree.Types"
-           , "        Sync.MerkleTree.Util.RequestMonad"
-           , "        Sync.MerkleTree.Util.GetFromInputStream"
-           , "    ghc-options: -Wall"
-           ] ++ buildDepends ++
-           [ "    hs-source-dirs: src"
-           , "    default-language: Haskell2010"
-           , "library"
+           ] ++ modules ++
+           [ "    ghc-options: -Wall"
+           ] ++ buildParams ++
+           [ "library"
            , "    exposed-modules:"
-           , "        Sync.MerkleTree.Analyse"
-           , "        Sync.MerkleTree.Client"
-           , "        Sync.MerkleTree.CommTypes"
-           , "        Sync.MerkleTree.Server"
-           , "        Sync.MerkleTree.Sync"
-           , "        Sync.MerkleTree.Run"
-           , "        Sync.MerkleTree.Trie"
-           , "        Sync.MerkleTree.Types"
-           , "        Sync.MerkleTree.Util.RequestMonad"
-           , "    ghc-options: -Wall"
-           ] ++ buildDepends ++
-           [ "    hs-source-dirs: src"
-           , "    default-language: Haskell2010"
-           ]
+           ] ++ modules ++
+           [ "    ghc-options: -Wall"
+           ] ++ buildParams

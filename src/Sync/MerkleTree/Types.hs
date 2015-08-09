@@ -12,6 +12,7 @@ import qualified Data.Text as T
 import Sync.MerkleTree.Trie
 import qualified Data.Serialize as SE
 
+-- | Information about a file that we expect to change, when the contents change.
 data File
     = File
       { f_name :: Path
@@ -39,11 +40,13 @@ data FileModTime = FileModTime { unModTime :: !Int64 }
 
 instance SE.Serialize FileModTime
 
+-- | Representation for paths below the synchronization root directory
 data Path
     = Root
     | Path SerText Path
     deriving (Eq, Ord, Generic)
 
+-- | Returns the string representation of a path
 toFilePath :: FilePath -> Path -> FilePath
 toFilePath fp p =
     case p of
@@ -52,6 +55,8 @@ toFilePath fp p =
 
 instance SE.Serialize Path
 
+-- | Entries are sorted first according to their depth in the path which is useful for directory
+-- operations
 instance Ord Entry where
     compare = comparing withLevel
         where
@@ -61,6 +66,7 @@ instance Ord Entry where
                 DirectoryEntry p -> Right p
                 FileEntry f -> Left f
 
+-- | Return the depth of an entries path
 levelOf :: Entry -> Int
 levelOf e =
     case e of

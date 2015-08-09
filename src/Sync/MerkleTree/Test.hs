@@ -40,12 +40,7 @@ testIgnoreBoring =
                createDirectory $ srcDir </> "a"
                createDirectory $ srcDir </> "with-foo"
                createDirectory destDir
-               writeFile (fp </> ".boring") $ unlines $
-                   [ "#baz"
-                   , ""
-                   , "foo"
-                   , "^bar"
-                   ]
+               writeFile (fp </> ".boring") $ unlines $ [ "#baz", "", "foo", "^bar" ]
                writeFile (srcDir </> "added.txt") "testA"
                writeFile (srcDir </> "added-bar.txt") "testB"
                writeFile (srcDir </> "baz") "testC"
@@ -99,12 +94,13 @@ testCmdLine = H.TestLabel "testCmdLine" $ H.TestCase $
     withSystemTempDirectory "sync-mht" $ \testDir ->
         do let srcDir = testDir </> "src"
                destDir = testDir </> "dest"
+               boringFile = testDir </> ".boring"
                expected = show [1..(2^17)]
            createDirectory srcDir
            createDirectory destDir
-           writeFile (".boring") "$bar^"
+           writeFile boringFile "$bar^"
            writeFile (srcDir </> "new.txt") expected
-           main "" ["-s",srcDir,"-d",destDir,"-a","-u","--delete","-i","$foo^","-b",".boring"]
+           main "" ["-s",srcDir,"-d",destDir,"-a","-u","--delete","-i","$foo^","-b",boringFile]
            got <- readFile  $ destDir </> "new.txt"
            expected H.@=? got
 
@@ -189,17 +185,12 @@ testOptions = H.TestLabel "testOptions" $ H.TestCase $
                    writeFile (srcDir </> "added.txt") "test"
                    writeFile (destDir </> "deleted.txt") "testB"
                    run "" $
-                       SyncOptions
+                       defaultSyncOptions
                        { so_source = Just $ srcDir
                        , so_destination = Just $ destDir
-                       , so_remote = Nothing
-                       , so_ignore = []
-                       , so_boring = []
                        , so_add = add
                        , so_update = update
                        , so_delete = delete
-                       , so_help = False
-                       , so_nonOptions = []
                        }
                    True <- liftM (=="test") $ readFile (srcDir </> "same.txt")
                    True <- liftM (=="test") $ readFile (srcDir </> "changed.txt")

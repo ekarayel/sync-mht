@@ -17,9 +17,9 @@
 -- runRequestMonad inputHandle outputHandle foo
 -- @
 --
--- will send both messages @GetSumOf 1 2@, @GetSumOf 4 5@, without having to wait for the repsonse to
--- the first request. The last request @GetSumOf 3 3@ will be send after the response for the first
--- message has arrived.
+-- will send both messages @GetSumOf 1 2@, @GetSumOf 4 5@, without having to wait for the repsonse
+-- to the first request. The last request @GetSumOf 3 3@ will be send after the response for the
+-- first message has arrived.
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -45,7 +45,8 @@ import Sync.MerkleTree.Util.GetFromInputStream
 import qualified Data.Serialize as SE
 import qualified System.IO.Streams as ST
 
-data SplitState f b = forall a. (Monoid a) => SplitState [RequestMonadT f a] a (a -> RequestMonadT ByteString b)
+data SplitState f b =
+    forall a. (Monoid a) => SplitState [RequestMonadT f a] a (a -> RequestMonadT ByteString b)
 data RequestState f b = forall a. (Serialize a) => RequestState f (a -> RequestMonadT ByteString b)
 data LiftIOState b = forall a. LiftIOState (IO a) (a -> RequestMonadT ByteString b)
 

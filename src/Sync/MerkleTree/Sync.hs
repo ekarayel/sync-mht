@@ -105,7 +105,8 @@ local :: ClientServerOptions -> FilePath -> FilePath -> IO ()
 local cs source destination =
     do sourceDir <- liftM (mkTrie 0) $ analyse source (cs_ignore cs)
        destinationDir <- liftM (mkTrie 0) $ analyse destination (cs_ignore cs)
-       evalStateT (abstractClient cs destination destinationDir) (startServerState source sourceDir)
+       serverState <- startServerState source sourceDir
+       evalStateT (abstractClient cs destination destinationDir) serverState
 
 serverOrClient :: LaunchMessage -> StreamPair -> IO ()
 serverOrClient lm streams
@@ -119,7 +120,7 @@ serverOrClient lm streams
     | otherwise = fail "Incompatible sync-mht versions."
 
 server :: [Entry] -> FilePath -> StreamPair -> IO ()
-server entries fp streams = evalStateT loop (startServerState fp $ mkTrie 0 entries)
+server entries fp streams = (startServerState fp $ mkTrie 0 entries) >>= evalStateT loop
     where
        serverRespond = liftIO . respond (sp_out streams)
        loop =
