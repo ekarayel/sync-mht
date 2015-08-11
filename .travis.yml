@@ -1,20 +1,28 @@
 env:
-  - CABALVER=1.18 GHCVER=7.8.3
-  - CABALVER=1.22 GHCVER=7.10.1
-  - secure: PxRsBm8kl7M0JBRGQ1wgtclRvz++CmpuvNmc4Reu677NCeqTaZ4Pdu0ZOXDWnqcPGbymKXp0/AGyLGV+aPCJ8lQ1aVrf/yj8UjDtvh3dZwU19SWvas6RHZ6ennWYnCwWVN5cQ8jGzB7OSFKXUhtM4qJh74gWQC+vmXdBNzi41Lt0NguFlsZUJt4Bv7r4vjhoD0DLsXaA1Ah5M8bbf/caq4pgTRx55+/wAxN9A8repXPWbZZ2ZUAEEyVoEqvJUboyhI8XzbjrNRpER6nkLyX362ZRTLbUsqwyfCOKZj/sjuFMv7ZEhWXoXdkZEnuDECOCQnhmsxTrxkmcqCAe2o6mnCijnqb5tvVhoa1V4l0UoHtcpwIXq6ESw5KPtKHkimIwR+SKX04zZ1cLFsZNzBNg70ZDSfjnsUYWpJhS0KeJoeHK4/oB56VGPzmgar5rnFTEMqBjZ1ntdYnhsgu4Y/fAUtBfAm1JuxJGM5oww0pLVRzB0vIXOasj9n3iW6OWn4Ps4lMiI3AT/oiyIzjVs7MiyjIyQjEFcgLthkVpDcDx4PviahDT69+c/q7yivNov0c7dSaUW0d6VE4gM9NJI4EO94DEsdjxTxNkYTW4zi+IDyKl7nfPcAgAXHwfnHnxiBUraWyjtmZo7s2KUzXcG1QXvrgmnEMuWKrGNUMpTPyjOJM=
+  secure: PxRsBm8kl7M0JBRGQ1wgtclRvz++CmpuvNmc4Reu677NCeqTaZ4Pdu0ZOXDWnqcPGbymKXp0/AGyLGV+aPCJ8lQ1aVrf/yj8UjDtvh3dZwU19SWvas6RHZ6ennWYnCwWVN5cQ8jGzB7OSFKXUhtM4qJh74gWQC+vmXdBNzi41Lt0NguFlsZUJt4Bv7r4vjhoD0DLsXaA1Ah5M8bbf/caq4pgTRx55+/wAxN9A8repXPWbZZ2ZUAEEyVoEqvJUboyhI8XzbjrNRpER6nkLyX362ZRTLbUsqwyfCOKZj/sjuFMv7ZEhWXoXdkZEnuDECOCQnhmsxTrxkmcqCAe2o6mnCijnqb5tvVhoa1V4l0UoHtcpwIXq6ESw5KPtKHkimIwR+SKX04zZ1cLFsZNzBNg70ZDSfjnsUYWpJhS0KeJoeHK4/oB56VGPzmgar5rnFTEMqBjZ1ntdYnhsgu4Y/fAUtBfAm1JuxJGM5oww0pLVRzB0vIXOasj9n3iW6OWn4Ps4lMiI3AT/oiyIzjVs7MiyjIyQjEFcgLthkVpDcDx4PviahDT69+c/q7yivNov0c7dSaUW0d6VE4gM9NJI4EO94DEsdjxTxNkYTW4zi+IDyKl7nfPcAgAXHwfnHnxiBUraWyjtmZo7s2KUzXcG1QXvrgmnEMuWKrGNUMpTPyjOJM=
+
+language: c
+
+# explicitly request container-based infrastructure
+sudo: false
+
+
+matrix:
+  include:
+    - env: CABALVER=1.18 GHCVER=7.8.4
+      addons: {apt: {packages: [cabal-install-1.18,ghc-7.8.4], sources: [hvr-ghc]}}
+    - env: CABALVER=1.22 GHCVER=7.10.1
+      addons: {apt: {packages: [cabal-install-1.22,ghc-7.10.1],sources: [hvr-ghc]}}
 
 before_install:
- - travis_retry sudo add-apt-repository -y ppa:hvr/ghc
- - travis_retry sudo apt-get update
- - travis_retry sudo apt-get install cabal-install-$CABALVER ghc-$GHCVER # see note about happy/alex
  - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
 
 install:
  - cabal --version
  - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
- - travis_retry cabal update
  - chmod +x configure.hs
  - ./configure.hs
+ - cabal update
  - cabal install --only-dependencies --enable-tests
 
 script:
