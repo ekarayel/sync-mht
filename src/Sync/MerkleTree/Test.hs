@@ -76,18 +76,22 @@ testBigFile = H.TestLabel "testBigFile" $ H.TestCase $
     withSystemTempDirectory "sync-mht" $ \testDir ->
         do let srcDir = testDir </> "src"
                destDir = testDir </> "dest"
-               data_ = show [1..(2^20)]
+               data_ = show [1..(2^17)]
            createDirectory srcDir
            createDirectory destDir
-           writeFile (srcDir </> "new.txt") data_
+           forM_ [1..400] $ \i -> writeFile (srcDir </> ("new.txt"++show i)) data_
            runSync $
                defaultSyncOptions
                { so_source = Just $ srcDir
                , so_destination = Just $ destDir
                , so_add = True
                }
-           dataNew <- readFile $ destDir </> "new.txt"
-           data_ H.@=? dataNew
+           dataNew1 <- readFile $ destDir </> "new.txt123"
+           dataNew2 <- readFile $ destDir </> "new.txt234"
+           dataNew3 <- readFile $ destDir </> "new.txt345"
+           data_ H.@=? dataNew1
+           data_ H.@=? dataNew2
+           data_ H.@=? dataNew3
 
 testCmdLine :: H.Test
 testCmdLine = H.TestLabel "testCmdLine" $ H.TestCase $
