@@ -32,7 +32,7 @@ install:
 script:
 - cabal configure --enable-tests --enable-library-coverage && cabal build && cabal test
 after_script:
-- if [[ $GHCVER = "7.8.4" ]]; then chmod +x coverage.sh && ./converage.sh; fi
+- if [[ $GHCVER = "7.8.4" ]]; then chmod +x coverage.sh && ./coverage.sh; fi
 before_deploy:
 - chmod +x configure.hs && ./configure.hs
 
