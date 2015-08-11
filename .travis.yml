@@ -15,6 +15,7 @@ install:
  - travis_retry cabal update
  - chmod +x configure.hs
  - ./configure.hs
+ - cabal install --only-dependencies --enable-tests
 
 script:
 - cabal configure --enable-tests --enable-library-coverage && cabal build && cabal test
