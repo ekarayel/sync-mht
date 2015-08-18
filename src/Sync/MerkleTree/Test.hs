@@ -29,6 +29,8 @@ tests = H.TestList $
     , testEntry
     , testIgnoreBoring
     , testSync
+    , testDoesThrowIOError
+    , testDirsEqual
     ]
 
 testIgnoreBoring :: H.Test
@@ -78,17 +80,20 @@ testBigFile = H.TestLabel "testBigFile" $ H.TestCase $
                destDir = testDir </> "dest"
                data_ = show [1..(2^17)]
            createDirectory srcDir
+           forM_ [1..20] $ \i ->
+               do createDirectory $ srcDir </> (show i)
+                  forM_ [1..20] $ \j ->
+                      writeFile (srcDir </> (show i) </> ("new.txt"++show j)) data_
            createDirectory destDir
-           forM_ [1..400] $ \i -> writeFile (srcDir </> ("new.txt"++show i)) data_
            runSync $
                defaultSyncOptions
                { so_source = Just $ srcDir
                , so_destination = Just $ destDir
                , so_add = True
                }
-           dataNew1 <- readFile $ destDir </> "new.txt123"
-           dataNew2 <- readFile $ destDir </> "new.txt234"
-           dataNew3 <- readFile $ destDir </> "new.txt345"
+           dataNew1 <- readFile $ destDir </> "1" </> "new.txt19"
+           dataNew2 <- readFile $ destDir </> "17" </> "new.txt13"
+           dataNew3 <- readFile $ destDir </> "12" </> "new.txt1"
            data_ H.@=? dataNew1
            data_ H.@=? dataNew2
            data_ H.@=? dataNew3
@@ -171,15 +176,13 @@ testExit = H.TestLabel "testExit" $ H.TestCase $
            createDirectory srcDir
            createDirectory destDir
            writeFile (srcDir </> "new.txt") data_
-           res <- (flip catchIOError) (\_ -> return True) $
+           shouldFail $
                do runSync $ defaultSyncOptions
                         { so_source = Just $ "remote:" ++ srcDir
                         , so_destination = Just $ destDir
                         , so_remote = Just $ RemoteCmd "exit"
                         , so_add = True
                         }
-                  return False
-           True H.@=? res
 
 testOptions :: H.Test
 testOptions = H.TestLabel "testOptions" $ H.TestCase $
@@ -272,6 +275,26 @@ mkRandomDir md fps =
                          forM_ fps $ \fp ->
                              do writeFile (fp </> n) (show d)
                                 setModificationTime (fp </> n) (utcTimeFrom d)
+
+doesThrowIOError :: IO () -> IO Bool
+doesThrowIOError a = catchIOError (a >>= (return . (`seq` False))) (return .  (`seq` True))
+
+shouldFail :: IO () -> IO ()
+shouldFail action = doesThrowIOError action >>= (True H.@=?)
+
+testDoesThrowIOError :: H.Test
+testDoesThrowIOError = H.TestLabel "testDoesThrowIOError" $ H.TestCase $
+    do r1 <- doesThrowIOError $ return ()
+       False H.@=? r1
+
+testDirsEqual :: H.Test
+testDirsEqual = H.TestLabel "testDirsEqual" $ H.TestCase $
+    shouldFail $ withSystemTempDirectory "sync-mht" $ \testDir ->
+           do createDirectory $ testDir </> "a"
+              createDirectory $ testDir </> "b"
+              writeFile (testDir </> "a" </> "x") "x"
+              writeFile (testDir </> "b" </> "x") "y"
+              areDirsEqual (testDir </> "a") (testDir </> "b")
 
 areDirsEqual :: FilePath -> FilePath -> IO ()
 areDirsEqual fp1 fp2 =
