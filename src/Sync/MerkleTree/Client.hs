@@ -95,7 +95,7 @@ abstractClient cs fp trie =
            forM_ (reverse $ sort delEntries) $ \e ->
                case e of
                  FileEntry f -> liftIO $ removeFile $ toFilePath fp $ f_name f
-                 DirectoryEntry p -> liftIO $ removeDirectory $ toFilePath fp p
+                 DirectoryEntry p -> liftIO $ removeDirectoryRecursive $ toFilePath fp p
        let updateEntries =
                [ e | cs_add cs, e <- newEntries ] ++ [ e | cs_update cs, e <- changedEntries ]
        progressEntries <- liftIO $ newIORef $ length updateEntries

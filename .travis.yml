@@ -24,11 +24,8 @@ matrix:
 before_install:
 - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
 install:
-- cabal --version
-- chmod +x configure.hs
-- ./configure.hs
-- cabal update
-- cabal install --only-dependencies --enable-tests --force-reinstalls
+- chmod +x configure.hs && ./configure.hs
+- cabal update && cabal install --only-dependencies --enable-tests --force-reinstalls
 script:
 - cabal configure --enable-tests --enable-library-coverage && cabal build && cabal test
 after_script:
