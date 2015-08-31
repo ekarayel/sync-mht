@@ -31,7 +31,7 @@ script:
 - cabal configure --enable-tests --enable-library-coverage && cabal build && cabal test
 after_script:
 - if [[ $GHCVER = "7.8.4" ]]; then chmod +x coverage.sh && ./coverage.sh; fi
-- if [[ $GHCVER = "7.8.4" ]]; mvn -f benchmarks/pom.xml test-compile exec:java; fi
+- if [[ $GHCVER = "7.8.4" ]]; then mvn -f benchmarks/pom.xml test-compile exec:java; fi
 
 deploy:
   - provider: hackage
