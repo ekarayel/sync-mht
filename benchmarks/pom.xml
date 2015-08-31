@@ -31,7 +31,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <mainClass>com.github.ekarayel.syncmht.benchmarks.Main</mainClass>
+                    <mainClass>${mainClass}</mainClass>
                 </configuration>
             </plugin>
         </plugins>
@@ -54,7 +54,6 @@
         </dependency>
     </dependencies>
     <properties>
-        <project.compute.version>v1-rev64-1.20.0</project.compute.version>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <mainClass>com.github.ekarayel.syncmht.benchmarks.Main</mainClass>
     </properties>
 </project>

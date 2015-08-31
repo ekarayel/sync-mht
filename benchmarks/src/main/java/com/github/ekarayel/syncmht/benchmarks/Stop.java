@@ -21,6 +21,7 @@ public class Stop {
                         .setApplicationName(Constants.APP_NAME)
                         .build();
         String instanceName = System.getenv("INSTANCE_ID");
-        compute.instances().delete(Constants.PROJECT_ID, Constants.ZONE_NAME, instanceName);
+        compute.instances().delete(Constants.PROJECT_ID, Constants.ZONE_NAME, instanceName)
+                .execute();
     }
 }

@@ -11,7 +11,7 @@ public class StartupScript {
                 Main.class.getClassLoader().getResourceAsStream("startup.sh"));
 
         return new String(startFile, StandardCharsets.UTF_8)
-                .replaceAll("<<TRAVIS_ID>>", System.getenv("TRAVIS_ID"))
+                .replaceAll("<<TRAVIS_COMMIT>>", System.getenv("TRAVIS_COMMIT"))
                 .replaceAll("<<INSTANCE_ID>>", instanceName);
     }
 }

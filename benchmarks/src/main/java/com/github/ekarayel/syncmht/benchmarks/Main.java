@@ -38,6 +38,13 @@ public class Main {
         String instanceName = "sync-mht-benchmarks-instance-"+
                 new BigInteger(130, random).toString(32);
 
+        ServiceAccount account = new ServiceAccount();
+        account.setEmail("default");
+        List<String> scopes = new ArrayList<>();
+        scopes.add("https://www.googleapis.com/auth/devstorage.full_control");
+        scopes.add("https://www.googleapis.com/auth/compute");
+        account.setScopes(scopes);
+        instance.setServiceAccounts(Collections.singletonList(account));
         instance.setName(instanceName);
         instance.setMachineType("https://www.googleapis.com/compute/v1/projects/"
                 + Constants.PROJECT_ID + "/zones/" + Constants.ZONE_NAME
