@@ -1,6 +1,7 @@
 env:
   global:
   - secure: PxRsBm8kl7M0JBRGQ1wgtclRvz++CmpuvNmc4Reu677NCeqTaZ4Pdu0ZOXDWnqcPGbymKXp0/AGyLGV+aPCJ8lQ1aVrf/yj8UjDtvh3dZwU19SWvas6RHZ6ennWYnCwWVN5cQ8jGzB7OSFKXUhtM4qJh74gWQC+vmXdBNzi41Lt0NguFlsZUJt4Bv7r4vjhoD0DLsXaA1Ah5M8bbf/caq4pgTRx55+/wAxN9A8repXPWbZZ2ZUAEEyVoEqvJUboyhI8XzbjrNRpER6nkLyX362ZRTLbUsqwyfCOKZj/sjuFMv7ZEhWXoXdkZEnuDECOCQnhmsxTrxkmcqCAe2o6mnCijnqb5tvVhoa1V4l0UoHtcpwIXq6ESw5KPtKHkimIwR+SKX04zZ1cLFsZNzBNg70ZDSfjnsUYWpJhS0KeJoeHK4/oB56VGPzmgar5rnFTEMqBjZ1ntdYnhsgu4Y/fAUtBfAm1JuxJGM5oww0pLVRzB0vIXOasj9n3iW6OWn4Ps4lMiI3AT/oiyIzjVs7MiyjIyQjEFcgLthkVpDcDx4PviahDT69+c/q7yivNov0c7dSaUW0d6VE4gM9NJI4EO94DEsdjxTxNkYTW4zi+IDyKl7nfPcAgAXHwfnHnxiBUraWyjtmZo7s2KUzXcG1QXvrgmnEMuWKrGNUMpTPyjOJM=
+  - secure: q/BCCJyNT1IwLSWTv7QP12fS2U3LOUCHPCc9xPAC9jKWXTiszGzaULCVNpb2xSWSrH78iy4SCOGUkJp7WX4rUjEKCLDq+sftN798MoxQC7Y161a3JpUZgi/t+vrXcD6XXtahRECPCy/KreO/5SOF7/l3XeIuOPXUewDF/VliOLl6UUsELX4CyvOZUGThMHHST/zAPL2e1C6het9KqUzI8bmvvBhyvVu7d00VOAvYKuBSm9smsrfWjNM85OlUpNAXIwFGLuD1ZeBB4HRaFGE2TPreCQr6O3uRAKJoktx8Ee0mIOY3srNnAq1Pg+oNcUN4SgKpImKqSmxfmaZ/31HTGaz0XRjM4lQUxSV3doRuBl5JiuaKseydlgOhXcrRh2qT+uVnejZmf2KX5rseDU1B0Utyur7oUhwFkoy8v/XLdzyZacmiRA928filVeibtbHFM4NZDZPYdUWBwfMylgqXkF6dc3y0zZ0G3AXvtK/aQYprnJR8yyABYOrF+rQiEAPxbsk5BkbCPHvKSlLpbjR6WUuK1ACFPkZqd9Py2FNWjty18uwg+rWfaHwmzY3IyDTKyXQz0vYA1vboIYjJT/7vrRD2EVyZvikH3PCfY9BHlTqEAqHeH1dan0rw3IaLOUUPXTIytNdSIZg7+7HRvUQOTUp/VnNTxhPfSnAR8vsXS3w=
 language: c
 sudo: false
 matrix:
@@ -30,8 +31,6 @@ script:
 - cabal configure --enable-tests --enable-library-coverage && cabal build && cabal test
 after_script:
 - if [[ $GHCVER = "7.8.4" ]]; then chmod +x coverage.sh && ./coverage.sh; fi
-before_deploy:
-- chmod +x configure.hs && ./configure.hs
 
 deploy:
   - provider: hackage
@@ -43,6 +42,7 @@ deploy:
       condition: $GHCVER = "7.8.4"
       tags: true
   - provider: releases
+    skip_cleanup: true
     api_key:
       secure: AFR587+4EFXmPhNqjGQCGKmiLVGNdnvnai0foCwiyUJH73gRkte9rRW82FHTxjN8CXsJNV7BEgrwESyvEe7TKt1v5QD6Z5nQggxu/3siDHZpTBTwyuklkb+krqiYM56YLOGsW68dyBxOkHZ99O2WMHk1+Q1Y3JzFhrXwfYixybaOLGGUV7dVGvKVtF3bnfPYrQdIdHPPd73AjNYgWMDSFBjbN5U/ENN2Wp31LSRhoBqhgxjpz8e2cDSEH7zzitZWx+5quV4kH2SilvnGllARMJvxR/juwx/biv/Do6LuyZu0kwVMGoRg13vcroqemZOFojaZuqGnkApNw/fZkQJ9HlxEkxwQJFuXnhUWDYsw0WWia4Pj93D0V7eAPOnh9b7RHO9Gssrcz7rzNcjs9gXJ8h8PTkunfQA11vSchaXLY2SfoGFTaOVfiIp7EW6DDAaDX6lkOgOh7aA2EqS7cv31Jge2q9XfmV/G7x3fizVeNSRT5YUTal8qU9kitmdPhwfElJzp0ytMvv/oBsuQb+ur9uCslMRm7I3JnmxHyZien+JQgr/blC//SelTTVa/7iLkTk6OxfnW9gNsV2C8ZEp4hwmopuNr93MJOV5MPc4XIx87Bq6NB+cRVrLFJMdjP2DAZpReAYDV/14FytwIWiC+BOFlZyQGXGrIMZAfvjlwffo=
     file: dist/build/sync-mht/sync-mht
