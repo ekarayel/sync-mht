@@ -21,6 +21,7 @@ public class Stop {
                 .build();
 
         StorageObject obj = new StorageObject();
+        obj.setContentType("text/plain");
         obj.set("test", 0.1);
 
         // Upload metrics
