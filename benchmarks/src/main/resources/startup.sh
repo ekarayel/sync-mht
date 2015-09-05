@@ -7,6 +7,6 @@ cd sync-mht
 git checkout -qf <<TRAVIS_COMMIT>>
 export INSTANCE_ID="<<INSTANCE_ID>>"
 docker build -f benchmarks/src/resources/Dockerfile -t ekarayel/sync-mht-benchmarks .
-docker run -i ekarayel/sync-mht-benchmarks ./benchmarks.sh
+docker run -i ekarayel/sync-mht-benchmarks ./benchmarks.sh > "benchmarks.json"
 mvn -f benchmarks/pom.xml test-compile exec:java \
     -DmainClass="com.github.ekarayel.syncmht.benchmarks.Stop"

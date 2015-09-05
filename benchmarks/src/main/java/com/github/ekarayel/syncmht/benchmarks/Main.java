@@ -60,18 +60,23 @@ public class Main {
         ifc.setAccessConfigs(configs);
         instance.setNetworkInterfaces(Collections.singletonList(ifc));
 
-        AttachedDisk disk = new AttachedDisk()
-                .setBoot(true)
-                .setAutoDelete(true)
-                .setType("PERSISTENT");
-        AttachedDiskInitializeParams params = new AttachedDiskInitializeParams();
-        params.setDiskName(instanceName);
-        params.setSourceImage(SOURCE_IMAGE_PREFIX + SOURCE_IMAGE_PATH);
-        params.setDiskType("https://www.googleapis.com/compute/v1/projects/"
-                + Constants.PROJECT_ID + "/zones/" + Constants.ZONE_NAME
-                + "/diskTypes/pd-standard");
-        disk.setInitializeParams(params);
-        instance.setDisks(Collections.singletonList(disk));
+        //AttachedDisk disk =
+        instance.setDisks(Collections.singletonList(
+            new AttachedDisk()
+            .setBoot(true)
+            .setAutoDelete(true)
+            .setType("PERSISTENT")
+            .setInitializeParams(
+                new AttachedDiskInitializeParams()
+                .setDiskName(instanceName)
+                .setSourceImage(SOURCE_IMAGE_PREFIX + SOURCE_IMAGE_PATH)
+                .setDiskType(
+                    SOURCE_IMAGE_PREFIX  + Constants.PROJECT_ID + "/zones/" + Constants.ZONE_NAME
+                    + "/diskTypes/pd-standard"
+                )
+
+            )
+        ));
 
         Metadata meta = new Metadata();
         Metadata.Items item = new Metadata.Items();
