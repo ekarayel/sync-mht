@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 apt-get update
-apt-get install -y docker.io maven openjdk-7-jdk
+apt-get install -y docker.io maven openjdk-8-jdk
 service docker start
 git clone https://github.com/ekarayel/sync-mht.git
 cd sync-mht
