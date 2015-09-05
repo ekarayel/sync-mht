@@ -7,8 +7,6 @@ import com.google.api.client.http.InputStreamContent;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.compute.Compute;
 import com.google.api.services.storage.Storage;
-import com.google.api.services.storage.model.StorageObject;
-import com.sun.tools.internal.jxc.ap.Const;
 
 import java.io.FileInputStream;
 import java.io.IOException;
