@@ -22,8 +22,8 @@ public class Stop {
         HttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
 
         ComputeCredential credential =
-                new ComputeCredential.Builder(httpTransport, JacksonFactory.getDefaultInstance())
-                .build();
+            new ComputeCredential.Builder(httpTransport, JacksonFactory.getDefaultInstance())
+            .build();
 
         FileInputStream fis = new FileInputStream("benchmarks.json");
         InputStreamContent mediaContent = new InputStreamContent("application/json", fis);

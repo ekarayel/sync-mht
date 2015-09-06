@@ -13,16 +13,13 @@ import com.google.api.services.compute.ComputeScopes;
 
 public class Authorize
 {
-    private static final String CONTAINER_FORMAT = "PKCS12";
     private static final String CONTAINER_FILE = "sync-mht-benchmark-3fe707ebe6a9.p12";
     private static final String CONTAINER_PASSWORD_ENV_VAR = "P12_PASSWORD";
-    private static final String PK_PASSWORD = "notasecret";
-    private static final String PK_KEY = "privatekey";
     private static final String ACCOUNT_ID =
-            "804884601791-v8g2n2sfnmi3c38ah66o2h98let2r7ud@developer.gserviceaccount.com";
+        "804884601791-v8g2n2sfnmi3c38ah66o2h98let2r7ud@developer.gserviceaccount.com";
 
     public static GoogleCredential getCredential() throws GeneralSecurityException, IOException {
-        KeyStore keystore = KeyStore.getInstance(CONTAINER_FORMAT);
+        KeyStore keystore = KeyStore.getInstance("PKCS12");
         keystore.load(
             Authorize.class.getClassLoader().getResourceAsStream(CONTAINER_FILE)
             , System.getenv(CONTAINER_PASSWORD_ENV_VAR).toCharArray()
@@ -33,7 +30,7 @@ public class Authorize
         .setJsonFactory(JacksonFactory.getDefaultInstance())
         .setServiceAccountId(ACCOUNT_ID)
         .setServiceAccountPrivateKey(
-            (PrivateKey)keystore.getKey(PK_KEY, PK_PASSWORD.toCharArray())
+            (PrivateKey)keystore.getKey("privatekey", "notasecret".toCharArray())
         ).setServiceAccountScopes(Collections.singleton(ComputeScopes.COMPUTE))
         .build();
     }
