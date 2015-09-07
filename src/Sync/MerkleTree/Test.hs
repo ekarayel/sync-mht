@@ -6,11 +6,13 @@ import Data.Ix
 import Data.List
 import Data.Time.Calendar
 import Data.Time.Clock
+import Foreign.C.Types
 import Sync.MerkleTree.Analyse
 import Sync.MerkleTree.Run
 import Sync.MerkleTree.Client
 import System.Directory
 import System.FilePath
+import System.Posix.Files
 import System.IO
 import System.IO.Error
 import System.IO.Temp
@@ -258,8 +260,8 @@ testSync =
                cmd
                areDirsEqual (testDir </> "target") (testDir </> "src-backup")
 
-utcTimeFrom :: Integer -> UTCTime
-utcTimeFrom x = UTCTime (fromGregorian 2015 07 29) (fromInteger x)
+utcTimeFrom :: Integer -> CTime
+utcTimeFrom x = CTime (1000+ fromIntegral x)
 
 mkRandomDir :: Integer -> [FilePath] -> IO ()
 mkRandomDir md fps =
@@ -274,7 +276,7 @@ mkRandomDir md fps =
                       do d <- randomRIO (1,4)
                          forM_ fps $ \fp ->
                              do writeFile (fp </> n) (show d)
-                                setModificationTime (fp </> n) (utcTimeFrom d)
+                                setFileTimes (fp </> n) (utcTimeFrom d) (utcTimeFrom d)
 
 doesThrowIOError :: IO () -> IO Bool
 doesThrowIOError a = catchIOError (a >>= (return . (`seq` False))) (return .  (`seq` True))
