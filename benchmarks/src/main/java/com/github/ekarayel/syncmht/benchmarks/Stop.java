@@ -42,7 +42,7 @@ public class Stop {
         .setApplicationName(Constants.APP_NAME)
         .build()
         .instances()
-        .delete(Constants.PROJECT_ID, Constants.ZONE_NAME, System.getenv("X"+INSTANCE_ID_ENV))
+        .delete(Constants.PROJECT_ID, Constants.ZONE_NAME, System.getenv(INSTANCE_ID_ENV))
         .execute();
     }
 }
