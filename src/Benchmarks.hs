@@ -28,8 +28,15 @@ data Result
       , r_sample :: Sample
       }
       deriving Generic
-
 instance ToJSON Result
+
+data Summary
+    = Summary
+    { s_results :: [Result]
+    , s_tag :: String
+    }
+    deriving Generic
+instance ToJSON Summary
 
 _RESOLUTION_ :: (Fractional a) => a
 _RESOLUTION_ = fromRational $ 1000 % 1
@@ -124,7 +131,7 @@ measure syncMhtPath s baseDir =
 -- Requires: patch, ssh, sshd listening on port 22, passwordless login for loopback ssh
 main :: IO ()
 main = withSystemTempDirectory "bench" $ \benchmarks ->
-    do [syncMhtPath] <- getArgs
+    do [syncMhtPath,tag] <- getArgs
        results <- forM samples $ \s ->
            do baseDir <- prepare s benchmarks
               fullTimes <- measure syncMhtPath s baseDir
@@ -139,4 +146,8 @@ main = withSystemTempDirectory "bench" $ \benchmarks ->
                   , r_patch = patchTimes
                   , r_sample = s
                   }
-       BS.writeFile "benchmarks.json" (encode results)
+       BS.writeFile "benchmarks.json" $ encode $
+           Summary
+           { s_results = results
+           , s_tag = tag
+           }
