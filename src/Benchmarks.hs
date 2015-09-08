@@ -16,9 +16,9 @@ data Times
     = Times
       { t_syncMht :: Integer
       , t_rsync :: Integer
+      , t_size :: Integer
       }
       deriving Generic
-
 instance ToJSON Times
 
 data Result
@@ -68,7 +68,6 @@ data Sample
     , s_diffTag :: String
     }
     deriving Generic
-
 instance ToJSON Sample
 
 samples :: [Sample]
@@ -90,7 +89,7 @@ sourceDataDir baseDir s = (sourceDir baseDir) </> (s_ghRepo s ++ "-" ++ s_startT
 targetDir :: FilePath -> String -> FilePath
 targetDir fp s = (fp </> "src" </> s)
 
-prepare :: Sample -> FilePath -> IO FilePath
+prepare :: Sample -> FilePath -> IO (FilePath, Integer, Integer)
 prepare s benchmarks =
     do createDirectoryIfMissing True benchmarks
        createDirectory baseDir
@@ -101,15 +100,19 @@ prepare s benchmarks =
            , "/commit/" ++ (s_diffTag s) ++ ".diff"
            ]
        runCmd ["unzip", src </> startTagZip, "-d", src]
-       return baseDir
+       fSize <- readCreateProcess
+           (shell "zip -0 -r - . | wc -c") { cwd = Just $ sourceDataDir baseDir s } ""
+       pSize <- readCreateProcess
+           (shell $ concat ["cat ", sourceDir baseDir </> (s_diffTag s ++ ".diff"), " | wc -c"]) ""
+       return (baseDir, read fSize, read pSize)
     where
       gitHubPrefix = "https://github.com/" ++ (s_ghAccount s) ++ "/" ++ (s_ghRepo s)
       startTagZip = (s_startTag s) ++ ".zip"
-      src = sourceDir baseDir -- DIR
+      src = sourceDir baseDir
       baseDir = benchmarks </> (s_ghAccount s ++ "-" ++ s_ghRepo s)
 
-measure :: String -> Sample -> FilePath -> IO Times
-measure syncMhtPath s baseDir =
+measure :: Integer -> String -> Sample -> FilePath -> IO Times
+measure size syncMhtPath s baseDir =
     do let srcData = sourceDataDir baseDir s
        tSyncMht <- withTime $ runCmd
            [ syncMhtPath, "-a", "-u", "--delete", "-s", srcData, "-d"
@@ -124,6 +127,7 @@ measure syncMhtPath s baseDir =
            Times
            { t_syncMht = tSyncMht
            , t_rsync = tRsync
+           , t_size = size
            }
 
 -- | Compare synchronization speeds of rsync vs. sync-mht using (patches of) GitHub repositories
@@ -133,13 +137,13 @@ main :: IO ()
 main = withSystemTempDirectory "bench" $ \benchmarks ->
     do [syncMhtPath,tag] <- getArgs
        results <- forM samples $ \s ->
-           do baseDir <- prepare s benchmarks
-              fullTimes <- measure syncMhtPath s baseDir
+           do (baseDir, fSize, pSize) <- prepare s benchmarks
+              fullTimes <- measure fSize syncMhtPath s baseDir
               runCmd
                   [ "patch", "-p1", "-d", sourceDataDir baseDir s, "-i"
                   , sourceDir baseDir </> (s_diffTag s ++ ".diff")
                   ]
-              patchTimes <- measure syncMhtPath s baseDir
+              patchTimes <- measure pSize syncMhtPath s baseDir
               return $
                   Result
                   { r_full = fullTimes
