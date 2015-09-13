@@ -9,4 +9,6 @@
     cd /sync-mht
     cabal bench benchmarks --benchmark-option="/.cabal/bin/sync-mht" --benchmark-option="$1"
 ) > /dev/nul
+echo "benchmarksCallback("
 cat benchmarks.json
+echo ");"

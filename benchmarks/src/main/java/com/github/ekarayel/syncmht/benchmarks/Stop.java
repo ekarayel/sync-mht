@@ -25,8 +25,8 @@ public class Stop {
             new ComputeCredential.Builder(httpTransport, JacksonFactory.getDefaultInstance())
             .build();
 
-        FileInputStream fis = new FileInputStream("benchmarks.json");
-        InputStreamContent mediaContent = new InputStreamContent("application/json", fis);
+        FileInputStream fis = new FileInputStream("benchmarks.js");
+        InputStreamContent mediaContent = new InputStreamContent("text/javascript", fis);
 
         // Upload metrics
         new Storage.Builder(httpTransport, JacksonFactory.getDefaultInstance(), credential)
