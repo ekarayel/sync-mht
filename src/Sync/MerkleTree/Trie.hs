@@ -18,7 +18,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Test.HUnit as H
 
-data Hash = Hash { unHash :: BS.ByteString }
+data Hash = Hash { unHash :: !BS.ByteString }
     deriving (Eq, Generic)
 
 instance Show Hash where
@@ -46,8 +46,8 @@ instance SE.Serialize NodeType
 -- Location in the Merkle Hash Trie
 data TrieLocation
     = TrieLocation
-    { tl_level :: Int -- ^ Must be nonnegative
-    , tl_index :: Int -- ^ Must be between nonnegative and smaller than (degree^tl_level)
+    { tl_level :: !Int -- ^ Must be nonnegative
+    , tl_index :: !Int -- ^ Must be between nonnegative and smaller than (degree^tl_level)
     }
     deriving (Generic)
 
@@ -63,8 +63,8 @@ class HasDigest a where
 -- We asssume the Tree below a node is identical while synchronizing if its FingerPrint is
 data Fingerprint
     = Fingerprint
-      { f_hash :: Hash
-      , f_nodeType :: NodeType
+      { f_hash :: !Hash
+      , f_nodeType :: !NodeType
       }
       deriving (Eq, Generic)
 
