@@ -78,6 +78,24 @@ samples =
       , s_startTag = "60e94d35e2e023f90e14b8907eb1115c9270e7ad"
       , s_diffTag = "ffddebc1c819f14d3982af5c185f9f619249020c"
       }
+    , Sample
+      { s_ghAccount = "JuliaLang"
+      , s_ghRepo = "julia"
+      , s_startTag = "3cb9b4879d9da4e14caa79fa6a1ed71fa93871e7"
+      , s_diffTag = "5b40f2bd35d87b267dc1ff1cfc6fd7e07670e89c"
+      }
+    , Sample
+      { s_ghAccount = "google"
+      , s_ghRepo = "closure-compiler"
+      , s_startTag = "2b748b89f8737f3338c0cbe027aa09df1dc8fcaa"
+      , s_diffTag = "7e74ada6effa6d429401e2f363a79594a123f269"
+      }
+    , Sample
+      { s_ghAccount = "atom"
+      , s_ghRepo = "atom"
+      , s_diffTag = "321bf690d214d229b132a4bc03c2f249aa670340"
+      , s_startTag = "27cc9cdff3521d5fd5b1725f8e354a2df91117b1"
+      }
     ]
 
 sourceDir :: FilePath -> FilePath
