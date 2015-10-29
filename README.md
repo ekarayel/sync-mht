@@ -36,3 +36,14 @@ to synchronize the folder /bar (of the container named bar) with the local folde
 Note that: The options -a -u --delete respectively, allow copying of files to the target directory,
 updating files that are already in the target directory - not matching the contents in the source
 directory and deleting files that are in the destination directory but not in the source directory.
+
+## Setup
+Installing sync-mht can be done using [stack](https://github.com/commercialhaskell/stack) with the
+following steps:
+
+```
+git clone --recursive https://github.com/ekarayel/sync-mht.git
+cd sync-mht
+./configure.hs
+stack install
+```
