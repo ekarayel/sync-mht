@@ -39,15 +39,15 @@ import Control.Monad.IO.Class(MonadIO(..))
 import Data.ByteString(ByteString)
 import Data.IORef(IORef,newIORef,modifyIORef,readIORef)
 import Data.Monoid(Monoid, mempty, mappend)
-import Data.Serialize(Serialize)
 import System.IO.Streams(InputStream, OutputStream)
 import Sync.MerkleTree.Util.GetFromInputStream
-import qualified Data.Serialize as SE
+import qualified Data.Bytes.Serial as SE
+import qualified Data.Bytes.Put as P
 import qualified System.IO.Streams as ST
 
 data SplitState f b =
     forall a. (Monoid a) => SplitState [RequestMonadT f a] a (a -> RequestMonadT ByteString b)
-data RequestState f b = forall a. (Serialize a) => RequestState f (a -> RequestMonadT ByteString b)
+data RequestState f b = forall a. (SE.Serial a) => RequestState f (a -> RequestMonadT ByteString b)
 data LiftIOState b = forall a. LiftIOState (IO a) (a -> RequestMonadT ByteString b)
 
 newtype RequestMonad b = RequestMonad { unReqMonad :: RequestMonadT ByteString b }
@@ -87,8 +87,8 @@ bindImpl f g =
       Return x -> g x
       Fail s -> Fail s
 
-request :: (Serialize a, Serialize b) => a -> RequestMonad b
-request x = RequestMonad $ Request $ RequestState (SE.encode x) Return
+request :: (SE.Serial a, SE.Serial b) => a -> RequestMonad b
+request x = RequestMonad $ Request $ RequestState (P.runPutS $ SE.serialize x) Return
 
 -- | Combine results in the monad non-deterministically
 -- (it is required that the monoid is commutative)

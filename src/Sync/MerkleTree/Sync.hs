@@ -27,7 +27,8 @@ import System.IO.Error
 import System.IO.Temp
 import System.IO.Streams(InputStream, OutputStream, connect)
 import Data.ByteString(ByteString)
-import qualified Data.Serialize as SE
+import qualified Data.Bytes.Serial as SE
+import qualified Data.Bytes.Put as P
 import qualified Data.ByteString as BS
 import qualified System.IO.Streams as ST
 import qualified System.IO.Streams.Concurrent as ST
@@ -63,6 +64,7 @@ instance Protocol RequestMonad where
     queryFileReq = request . QueryFile
     queryFileContReq = request . QueryFileCont
     logReq = request . Log
+    queryTime = request QueryTime
     terminateReq = request Terminate
 
 instance ClientMonad RequestMonad where
@@ -98,8 +100,8 @@ parent streams source destination direction clientServerOpts =
           , lm_side = side
           }
 
-respond :: (SE.Serialize a) => OutputStream ByteString -> a -> IO ()
-respond os = mapM_ (flip ST.write os . Just) . (:[BS.empty]) . SE.encode
+respond :: (SE.Serial a) => OutputStream ByteString -> a -> IO ()
+respond os = mapM_ (flip ST.write os . Just) . (:[BS.empty]) . P.runPutS . SE.serialize
 
 local :: ClientServerOptions -> FilePath -> FilePath -> IO ()
 local cs source destination =
@@ -131,6 +133,7 @@ server entries fp streams = (startServerState fp $ mkTrie 0 entries) >>= evalSta
                 QueryFile f -> queryFileReq f >>= serverRespond >> loop
                 QueryFileCont c -> queryFileContReq c >>= serverRespond >> loop
                 Log t -> logReq t >>= serverRespond >> loop
+                QueryTime -> queryTime >>= serverRespond >> loop
                 Terminate -> terminateReq >>= serverRespond
 
 client :: ClientServerOptions -> [Entry] -> FilePath -> StreamPair -> IO ()
@@ -155,7 +158,7 @@ tests = H.TestList $
           withSystemTempDirectory "testProtocolVersion" $ \dir ->
               do r <- flip catchIOError (\_ -> return True) $
                      do inst <-
-                            ST.fromByteString $ SE.encode $ show $
+                            ST.fromByteString $ P.runPutS $ SE.serialize $ show $
                             LaunchMessage
                             { lm_protocolVersion = Version1
                             , lm_dir = dir
@@ -166,6 +169,7 @@ tests = H.TestList $
                                 , cs_update = False
                                 , cs_delete = False
                                 , cs_ignore = []
+                                , cs_compareClocks = Nothing
                                 }
                             }
                         out <- ST.nullOutput

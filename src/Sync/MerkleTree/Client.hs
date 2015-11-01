@@ -1,14 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 module Sync.MerkleTree.Client where
 
 import Control.Monad
 import Control.Monad.IO.Class
 import Codec.Compression.GZip
-import Data.Foldable(Foldable)
 import Data.Function
-import Data.Monoid(Monoid, mappend, mempty, Sum(..))
+import Data.Monoid(Sum(..))
 import Data.Set(Set)
 import Data.Time.Clock
 import Data.List
@@ -52,7 +52,7 @@ class (Protocol m, MonadIO m) => (ClientMonad m) where
 
 logClient :: (Protocol m) => T.Text -> m ()
 logClient t =
-    do True <- logReq $ SerText t
+    do True <- logReq t
        return ()
 
 data SimpleEntry
@@ -80,8 +80,26 @@ data Progress
     , pg_last :: IORef UTCTime
     }
 
+checkClockDiff :: (ClientMonad m) => ClientServerOptions -> m Bool
+checkClockDiff opts
+    | Just (realToFrac -> treshold, realToFrac -> skew) <- cs_compareClocks opts =
+        do t0 <- liftIO getCurrentTime
+           t1 <- liftM (addUTCTime skew) queryTime
+           t2 <- liftIO getCurrentTime
+           return $ and [ diffUTCTime t0 t1 < treshold, diffUTCTime t1 t2 < treshold ]
+    | otherwise = return True
+
 abstractClient :: (ClientMonad m) => ClientServerOptions -> FilePath -> Trie Entry -> m ()
 abstractClient cs fp trie =
+    do drift <- checkClockDiff cs
+       case drift of
+         True -> syncClient cs fp trie
+         False ->
+             do True <- terminateReq
+                return ()
+
+syncClient :: (ClientMonad m) => ClientServerOptions -> FilePath -> Trie Entry -> m ()
+syncClient cs fp trie =
     do logClient $ T.concat [ "Hash of destination directory: ", showText $ t_hash trie, "\n" ]
        Diff oent nent <- nodeReq (rootLocation, trie)
        let (delEntries, changedEntries, newEntries) = analyseEntries (Diff oent nent)
@@ -184,4 +202,4 @@ testEntry = H.TestLabel "testEntry" $ H.TestList
     , False H.~=? (DirectorySimpleEntry p  == FileSimpleEntry p)
     ]
     where
-      p = Path (SerText "t") Root
+      p = Path "t" Root

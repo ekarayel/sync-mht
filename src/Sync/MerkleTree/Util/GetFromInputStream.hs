@@ -2,22 +2,20 @@ module Sync.MerkleTree.Util.GetFromInputStream
     ( getFromInputStream
     ) where
 
-import Data.ByteString(ByteString)
-import Data.Serialize(Serialize)
-import System.IO.Streams(InputStream)
 import qualified Data.ByteString as BS
-import qualified Data.Serialize as SE
+import qualified Data.Bytes.Serial as SE
+import qualified Data.Serialize as CES
 import qualified System.IO.Streams as ST
 
 -- | Deserialize value from inputstream
-getFromInputStream :: (Serialize a) => InputStream ByteString -> IO a
-getFromInputStream s = go (SE.Partial $ SE.runGetPartial SE.get)
+getFromInputStream :: (SE.Serial a) => ST.InputStream BS.ByteString -> IO a
+getFromInputStream s = go (CES.Partial $ CES.runGetPartial SE.deserialize)
     where
-      go (SE.Fail err _bs) = fail err
-      go (SE.Partial f) =
+      go (CES.Fail err _bs) = fail err
+      go (CES.Partial f) =
           do x <- ST.read s
              case x of
                Nothing -> (go $ f BS.empty)
-               Just x' | BS.null x' -> go (SE.Partial f)
+               Just x' | BS.null x' -> go (CES.Partial f)
                        | otherwise -> go (f x')
-      go (SE.Done r bs) = ST.unRead bs s >> return r
+      go (CES.Done r bs) = ST.unRead bs s >> return r

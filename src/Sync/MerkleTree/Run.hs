@@ -31,6 +31,7 @@ data SyncOptions
       , so_delete :: Bool
       , so_help :: Bool
       , so_nonOptions :: [String]
+      , so_compareClocks :: Maybe (Double, Double)
       }
 
 defaultSyncOptions :: SyncOptions
@@ -46,6 +47,7 @@ defaultSyncOptions =
     , so_delete = False
     , so_help = False
     , so_nonOptions = []
+    , so_compareClocks = Nothing
     }
 
 toClientServerOptions :: SyncOptions -> IO ClientServerOptions
@@ -60,6 +62,7 @@ toClientServerOptions so =
             , cs_update = so_update so
             , cs_delete = so_delete so
             , cs_ignore = (concat ignoreFromBoringFiles) ++ (so_ignore so)
+            , cs_compareClocks = so_compareClocks so
             }
 
 optDescriptions :: [OptDescr (SyncOptions -> SyncOptions)]
@@ -80,6 +83,9 @@ optDescriptions =
         "overwrite existing files"
     , Option [] ["delete"] (NoArg (\so -> so { so_delete = True }))
         "delete superfluos files in the destination directory"
+    , Option [] ["compareclocks"]
+        (OptArg (\x so -> so { so_compareClocks = fmap (flip (,) 0.0 . read) x }) "T")
+        "check whether there is a clock drift between client and server"
     , Option ['h'] ["help"] (NoArg (\so -> so { so_help = True })) "shows usage information"
     ]
 
@@ -185,7 +191,7 @@ runParent clientServerOpts mRemoteCmd source destination dir =
                     _ <- forkIO $ child $
                         StreamPair
                         { sp_in = childInStream
-                        , sp_out = childOutStream 
+                        , sp_out = childOutStream
                         }
                     return $ StreamPair { sp_in = parentInStream, sp_out = parentOutStream }
        parent parentStreams source destination dir clientServerOpts

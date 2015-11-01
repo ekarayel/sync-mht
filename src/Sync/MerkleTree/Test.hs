@@ -22,7 +22,8 @@ import qualified Test.HUnit as H
 
 tests :: H.Test
 tests = H.TestList $
-    [ testOptions
+    [ testClockDriftFail
+    , testOptions
     , testBigFile
     , testHelp
     , testCmdLine
@@ -130,6 +131,29 @@ testCmdLineFail = H.TestLabel "testCmdLineFail" $ H.TestCase $
            runMain ["--help"]
            runMain ["-s",srcDir,"-d",destDir]
            (doesFileExist $ destDir </> "new.txt") >>= (False H.@=?)
+
+testClockDriftFail :: H.Test
+testClockDriftFail = H.TestLabel "testClockDriftFail" $ H.TestCase $
+    withSystemTempDirectory "sync-mht" $ \testDir ->
+        do let srcDir = testDir </> "src"
+               destDir = testDir </> "dest"
+               expected = "expected"
+               syncOpts =
+                   defaultSyncOptions
+                   { so_add = True
+                   , so_source = Just $ srcDir
+                   , so_destination = Just $ "remote:" ++ destDir
+                   , so_remote = Just Simulate
+                   }
+           createDirectory srcDir
+           createDirectory destDir
+           writeFile (srcDir </> "new.txt") expected
+           runSync $ syncOpts { so_compareClocks = Just (10.0, -100.0) }
+           runSync $ syncOpts { so_compareClocks = Just (10.0, 100.0) }
+           (doesFileExist $ destDir </> "new.txt") >>= (False H.@=?)
+           runSync $ syncOpts { so_compareClocks = Just (10.0, 0.0) }
+           got <- readFile  $ destDir </> "new.txt"
+           expected H.@=? got
 
 runMain :: [String] -> IO ()
 runMain = main ""

@@ -19,6 +19,7 @@ main =
                , "        , containers >=0.5 && <0.6"
                , "        , text >=1.1 && <1.3"
                , "        , bytestring >=0.10 && <0.11"
+               , "        , bytes >= 0.15"
                , "        , base16-bytestring >=0.1 && <0.2"
                , "        , cereal >= 0.4 && < 0.5"
                , "        , io-streams >= 1.2 && <1.4"

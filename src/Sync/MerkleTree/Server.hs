@@ -17,6 +17,7 @@ import Data.Map(Map)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
 import System.IO
+import Data.Time.Clock
 
 data ServerState
     = ServerState
@@ -43,7 +44,7 @@ startServerState fp trie =
 instance Protocol ServerMonad where
     querySetReq l = get >>= (\s -> querySet (st_trie s) l)
     queryHashReq l = get >>= (\s -> queryHash (st_trie s) l)
-    logReq (SerText msg) = liftIO (T.hPutStr stderr msg) >> return True
+    logReq msg = liftIO (T.hPutStr stderr msg) >> return True
     queryFileContReq (ContHandle n) =
         do s <- get
            let Just h = M.lookup n (st_handles s)
@@ -54,6 +55,7 @@ instance Protocol ServerMonad where
            let n = st_nextHandle s
            put $ s { st_handles = M.insert n h (st_handles s), st_nextHandle = n + 1 }
            withHandle h n
+    queryTime = liftIO getCurrentTime
     terminateReq = return True
 
 -- | Respond to a queryFile or queryFileCont request for a given file handle and id

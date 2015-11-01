@@ -12,7 +12,7 @@ import GHC.Generics
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.List as L
-import qualified Data.Serialize as SE
+import qualified Data.Bytes.Serial as SE
 import qualified Data.Set as S
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -24,7 +24,7 @@ data Hash = Hash { unHash :: !BS.ByteString }
 instance Show Hash where
     showsPrec _ x = ((T.unpack $ TE.decodeUtf8 $ B16.encode $ unHash x) ++)
 
-instance SE.Serialize Hash
+instance SE.Serial Hash
 
 -- Abstract Merkle Hash Trie
 data Trie a
@@ -41,7 +41,8 @@ data TrieNode a
 
 data NodeType = NodeType | LeaveType
     deriving (Eq, Generic)
-instance SE.Serialize NodeType
+
+instance SE.Serial NodeType
 
 -- Location in the Merkle Hash Trie
 data TrieLocation
@@ -51,7 +52,7 @@ data TrieLocation
     }
     deriving (Generic)
 
-instance SE.Serialize TrieLocation
+instance SE.Serial TrieLocation
 
 degree :: Int
 degree = 64
@@ -68,7 +69,7 @@ data Fingerprint
       }
       deriving (Eq, Generic)
 
-instance SE.Serialize Fingerprint
+instance SE.Serial Fingerprint
 
 toFingerprint :: Trie a -> Fingerprint
 toFingerprint (Trie h node) = Fingerprint h nodeType

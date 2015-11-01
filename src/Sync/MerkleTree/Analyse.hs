@@ -48,7 +48,7 @@ analyseEntry fp ignore path name
         do status <- getFileStatus fp'
            analyse' status
     where
-      path' = Path (SerText $ T.pack name) path
+      path' = Path (T.pack name) path
       fp' = fp </> name
       analyse' status
           | isRegularFile status =

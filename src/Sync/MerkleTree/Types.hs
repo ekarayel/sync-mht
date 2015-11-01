@@ -7,10 +7,10 @@ import Data.Int
 import Crypto.Hash
 import Data.Ord
 import GHC.Generics
-import qualified Data.Text.Encoding as TE
 import qualified Data.Text as T
 import Sync.MerkleTree.Trie
-import qualified Data.Serialize as SE
+import qualified Data.Bytes.Serial as SE
+import qualified Data.Bytes.Put as P
 
 -- | Information about a file that we expect to change, when the contents change.
 data File
@@ -21,29 +21,29 @@ data File
       }
       deriving (Eq, Ord, Generic)
 
-instance SE.Serialize File
+instance SE.Serial File
 
 data Entry
     = FileEntry File
     | DirectoryEntry Path
     deriving (Eq, Generic)
 
-instance SE.Serialize Entry
+instance SE.Serial Entry
 
 newtype FileSize = FileSize { unFileSize :: Int64 }
     deriving (Eq, Ord, Generic, Num)
 
-instance SE.Serialize FileSize
+instance SE.Serial FileSize
 
 data FileModTime = FileModTime { unModTime :: !Int64 }
     deriving (Eq, Ord, Generic)
 
-instance SE.Serialize FileModTime
+instance SE.Serial FileModTime
 
 -- | Representation for paths below the synchronization root directory
 data Path
     = Root
-    | Path SerText Path
+    | Path T.Text Path
     deriving (Eq, Ord, Generic)
 
 -- | Returns the string representation of a path
@@ -51,9 +51,9 @@ toFilePath :: FilePath -> Path -> FilePath
 toFilePath fp p =
     case p of
       Root -> fp
-      Path x y -> (toFilePath fp y) </> (T.unpack $ unSerText x)
+      Path x y -> (toFilePath fp y) </> (T.unpack x)
 
-instance SE.Serialize Path
+instance SE.Serial Path
 
 -- | Entries are sorted first according to their depth in the path which is useful for directory
 -- operations
@@ -77,11 +77,4 @@ levelOf e =
       level (Path _ p) = 1 + level p
 
 instance HasDigest Entry where
-    digest = hash . SE.encode
-
-data SerText = SerText { unSerText :: !T.Text }
-    deriving (Ord, Eq)
-
-instance SE.Serialize SerText where
-    get = SE.get >>= either (fail . show) (return . SerText) . TE.decodeUtf8'
-    put = SE.put . TE.encodeUtf8 . unSerText
+    digest = hash . P.runPutS . SE.serialize
