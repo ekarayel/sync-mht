@@ -44,6 +44,6 @@ following steps:
 ```
 git clone --recursive https://github.com/ekarayel/sync-mht.git
 cd sync-mht
-./configure.hs
+stack exec runhaskell configure.hs
 stack install
 ```
