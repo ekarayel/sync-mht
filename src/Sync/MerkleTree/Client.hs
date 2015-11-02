@@ -38,13 +38,13 @@ instance Ord a => Monoid (Diff a) where
 showText :: (Show a) => a -> T.Text
 showText = T.pack . show
 
-dataSize :: (Foldable f) => f Entry -> FileSize
+dataSize :: (F.Foldable f) => f Entry -> FileSize
 dataSize s = getSum $ F.foldMap sizeOf s
     where
       sizeOf (FileEntry f) = Sum $ f_size f
       sizeOf (DirectoryEntry _) = Sum $ FileSize 0
 
-dataSizeText :: (Foldable f) => f Entry -> T.Text
+dataSizeText :: (F.Foldable f) => f Entry -> T.Text
 dataSizeText s = T.concat [showText $ unFileSize $ dataSize s, " bytes"]
 
 class (Protocol m, MonadIO m) => (ClientMonad m) where
