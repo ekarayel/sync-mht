@@ -32,6 +32,7 @@ data SyncOptions
       , so_help :: Bool
       , so_nonOptions :: [String]
       , so_compareClocks :: Maybe (Double, Double)
+      , so_version :: Bool
       }
 
 defaultSyncOptions :: SyncOptions
@@ -47,6 +48,7 @@ defaultSyncOptions =
     , so_delete = False
     , so_help = False
     , so_nonOptions = []
+    , so_version = False
     , so_compareClocks = Nothing
     }
 
@@ -86,6 +88,7 @@ optDescriptions =
     , Option [] ["compareclocks"]
         (OptArg (\x so -> so { so_compareClocks = fmap (flip (,) 0.0 . read) x }) "T")
         "check whether there is a clock drift between client and server"
+    , Option ['v'] ["version"] (NoArg (\so -> so { so_version = True})) "shows version"
     , Option ['h'] ["help"] (NoArg (\so -> so { so_help = True })) "shows usage information"
     ]
 
@@ -137,6 +140,7 @@ main version args = flip catchIOError (putError . show) $
 run :: String -> SyncOptions -> IO ()
 run version so
     | so_help so = usage []
+    | so_version so = putStrLn version
     | not (null (so_nonOptions so)) =
         usage ["Unrecognized options: " ++ intercalate ", " (so_nonOptions so)]
     | Just source <- so_source so, Just destination <- so_destination so =
