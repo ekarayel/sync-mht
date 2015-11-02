@@ -8,7 +8,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Codec.Compression.GZip
 import Data.Function
-import Data.Monoid(Sum(..))
+import Data.Monoid(Monoid, mempty, mappend, Sum(..))
 import Data.Set(Set)
 import Data.Time.Clock
 import Data.List
