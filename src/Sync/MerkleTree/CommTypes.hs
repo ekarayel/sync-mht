@@ -56,14 +56,11 @@ data QueryFileResponse
 
 instance Serial QueryFileResponse
 
-data ProtocolVersion
-    = Version1
-    | Version2
-    | Version3
+data ProtocolVersion = ProtocolVersion !Int
     deriving (Read, Show, Eq)
 
 thisProtocolVersion :: ProtocolVersion
-thisProtocolVersion = Version3
+thisProtocolVersion = ProtocolVersion 4
 
 data LaunchMessage
     = LaunchMessage

@@ -58,7 +58,7 @@ degree :: Int
 degree = 64
 
 class HasDigest a where
-    digest :: a -> Digest SHA256
+    digest :: a -> Digest MD5
 
 -- | Fingerprint of a Merkle-Hash-Tree node
 -- We asssume the Tree below a node is identical while synchronizing if its FingerPrint is
@@ -96,11 +96,11 @@ mkNode arr =
     , t_node = Node arr
     }
 
-hashSHA256 :: BS.ByteString -> Digest SHA256
-hashSHA256 = hash
+hashMD5 :: BS.ByteString -> Digest MD5
+hashMD5 = hash
 
 combineHash :: [Hash] -> Hash
-combineHash = Hash . toBytes . hashSHA256 . BS.concat . map unHash
+combineHash = Hash . toBytes . hashMD5 . BS.concat . map unHash
 
 -- | The function @groupOf x@ eeturns a value between 0 to degree-1 for a digest with the property
 -- that @groupOf@ forms an approximate unviversal hash familiy.
@@ -108,7 +108,7 @@ groupOf :: (HasDigest a) => Int -> a -> Int
 groupOf i x = fromInteger $ toInteger $ (h0 `mod` (fromInteger $ toInteger degree))
      where
        Just (h0, _t) = BS.uncons $ toBytes $ h
-       h :: Digest SHA256
+       h :: Digest MD5
        h = hash $ BS.concat [BS.pack [fromInteger $ toInteger i], toBytes $ digest x]
 
 mkLeave :: (HasDigest a, Ord a) => [a] -> Trie a
@@ -159,7 +159,7 @@ newtype TestDigest = TestDigest { unTestDigest :: T.Text }
     deriving (Eq, Ord, Show)
 
 instance HasDigest TestDigest where
-    digest = hashSHA256 . TE.encodeUtf8 . unTestDigest
+    digest = hashMD5 . TE.encodeUtf8 . unTestDigest
 
 tests :: H.Test
 tests = H.TestList $

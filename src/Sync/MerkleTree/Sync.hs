@@ -160,7 +160,7 @@ tests = H.TestList $
                      do inst <-
                             ST.fromByteString $ P.runPutS $ SE.serialize $ show $
                             LaunchMessage
-                            { lm_protocolVersion = Version1
+                            { lm_protocolVersion = ProtocolVersion 1
                             , lm_dir = dir
                             , lm_side = Client
                             , lm_clientServerOptions =
