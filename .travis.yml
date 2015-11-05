@@ -27,6 +27,7 @@ matrix:
         sources:
         - hvr-ghc
   - os: osx
+    env: HVR=false
 before_install:
 - if [[ $HVR = "true" ]]; then export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH; else brew update && brew install haskell-stack; fi
 install:
@@ -34,10 +35,10 @@ install:
 - if [[ $HVR = "true" ]]; then cabal update && cabal install --only-dependencies --enable-tests --force-reinstalls; fi
 script:
 - if [[ $HVR = "true" ]]; then cabal configure --enable-tests --enable-library-coverage && cabal build && cabal test; else stack install; fi
+- if [[ $HVR = "true" ]]; then cp dist/build/sync-mht/sync-mht sync-mht-linux; else cp `stack path --local-bin-path`/sync-mht sync-mht-osx; fi
 after_script:
 - if [[ $GHCVER = "7.8.4" ]]; then mvn -f benchmarks/pom.xml test-compile exec:java; fi
 - if [[ $GHCVER = "7.8.4" ]]; then chmod +x coverage.sh && ./coverage.sh; fi
-- if [[ $HVR = "true" ]]; then cp dist/build/sync-mht/sync-mht sync-mht-linux; else cp `stack path --local-bin-path`/sync-mht sync-mht-osx; fi
 deploy:
   - provider: hackage
     username: emink
@@ -61,4 +62,4 @@ deploy:
       secure: AFR587+4EFXmPhNqjGQCGKmiLVGNdnvnai0foCwiyUJH73gRkte9rRW82FHTxjN8CXsJNV7BEgrwESyvEe7TKt1v5QD6Z5nQggxu/3siDHZpTBTwyuklkb+krqiYM56YLOGsW68dyBxOkHZ99O2WMHk1+Q1Y3JzFhrXwfYixybaOLGGUV7dVGvKVtF3bnfPYrQdIdHPPd73AjNYgWMDSFBjbN5U/ENN2Wp31LSRhoBqhgxjpz8e2cDSEH7zzitZWx+5quV4kH2SilvnGllARMJvxR/juwx/biv/Do6LuyZu0kwVMGoRg13vcroqemZOFojaZuqGnkApNw/fZkQJ9HlxEkxwQJFuXnhUWDYsw0WWia4Pj93D0V7eAPOnh9b7RHO9Gssrcz7rzNcjs9gXJ8h8PTkunfQA11vSchaXLY2SfoGFTaOVfiIp7EW6DDAaDX6lkOgOh7aA2EqS7cv31Jge2q9XfmV/G7x3fizVeNSRT5YUTal8qU9kitmdPhwfElJzp0ytMvv/oBsuQb+ur9uCslMRm7I3JnmxHyZien+JQgr/blC//SelTTVa/7iLkTk6OxfnW9gNsV2C8ZEp4hwmopuNr93MJOV5MPc4XIx87Bq6NB+cRVrLFJMdjP2DAZpReAYDV/14FytwIWiC+BOFlZyQGXGrIMZAfvjlwffo=
     file: sync-mht-osx
     on:
-      condition: $HVR -ne "true"
+      condition: $HVR = "false"
