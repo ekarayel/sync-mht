@@ -30,7 +30,7 @@ matrix:
 before_install:
 - if [[ $HVR = "true" ]]; then export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH; else brew update && brew install haskell-stack; fi
 install:
-- if [[ $HVR = "true" ]]; then chmod +x configure.hs && ./configure.hs; else stack exec runhaskell configure.hs; fi
+- if [[ $HVR = "true" ]]; then chmod +x configure.hs && ./configure.hs; else stack setup && stack exec runhaskell configure.hs; fi
 - if [[ $HVR = "true" ]]; then cabal update && cabal install --only-dependencies --enable-tests --force-reinstalls; fi
 script:
 - if [[ $HVR = "true" ]]; then cabal configure --enable-tests --enable-library-coverage && cabal build && cabal test; else stack install; fi
