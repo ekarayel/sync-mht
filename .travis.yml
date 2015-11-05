@@ -27,6 +27,7 @@ matrix:
         sources:
         - hvr-ghc
   - os: osx
+    jdk: oraclejdk8
 before_install:
 - if [[ $HVR = "true" ]];
      export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH;
@@ -35,19 +36,12 @@ before_install:
   fi
 install:
 - chmod +x configure.hs && ./configure.hs
-- if [[ $HVR = "true" ]];
-     cabal update && cabal install --only-dependencies --enable-tests --force-reinstalls
-  fi
+- if [[ $HVR = "true" ]]; cabal update && cabal install --only-dependencies --enable-tests --force-reinstalls; fi
 script:
-- if [[ $HVR = "true" ]];
-     cabal configure --enable-tests --enable-library-coverage && cabal build && cabal test
-  else
-     stack install
-  fi
+- if [[ $HVR = "true" ]]; cabal configure --enable-tests --enable-library-coverage && cabal build && cabal test; else stack install; fi
 after_script:
 - if [[ $GHCVER = "7.8.4" ]]; then mvn -f benchmarks/pom.xml test-compile exec:java; fi
 - if [[ $GHCVER = "7.8.4" ]]; then chmod +x coverage.sh && ./coverage.sh; fi
-
 deploy:
   - provider: hackage
     username: emink
