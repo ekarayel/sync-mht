@@ -6,7 +6,8 @@ language: java
 sudo: false
 matrix:
   include:
-  - env: CABALVER=1.18 GHCVER=7.8.4
+  - os: linux
+    env: CABALVER=1.18 GHCVER=7.8.4 HVR=true
     jdk: oraclejdk8
     addons:
       apt:
@@ -15,7 +16,8 @@ matrix:
         - ghc-7.8.4
         sources:
         - hvr-ghc
-  - env: CABALVER=1.22 GHCVER=7.10.2
+  - os: linux
+    env: CABALVER=1.22 GHCVER=7.10.2 HVR=true
     jdk: oraclejdk8
     addons:
       apt:
@@ -24,13 +26,24 @@ matrix:
         - ghc-7.10.2
         sources:
         - hvr-ghc
+  - os: osx
 before_install:
-- export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
+- if [[ $HVR = "true" ]];
+     export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH;
+  else
+     brew install haskell-stack
+  fi
 install:
 - chmod +x configure.hs && ./configure.hs
-- cabal update && cabal install --only-dependencies --enable-tests --force-reinstalls
+- if [[ $HVR = "true" ]];
+     cabal update && cabal install --only-dependencies --enable-tests --force-reinstalls
+  fi
 script:
-- cabal configure --enable-tests --enable-library-coverage && cabal build && cabal test
+- if [[ $HVR = "true" ]];
+     cabal configure --enable-tests --enable-library-coverage && cabal build && cabal test
+  else
+     stack install
+  fi
 after_script:
 - if [[ $GHCVER = "7.8.4" ]]; then mvn -f benchmarks/pom.xml test-compile exec:java; fi
 - if [[ $GHCVER = "7.8.4" ]]; then chmod +x coverage.sh && ./coverage.sh; fi
