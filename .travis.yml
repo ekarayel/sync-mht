@@ -28,7 +28,7 @@ matrix:
         - hvr-ghc
   - os: osx
 before_install:
-- if [[ $HVR = "true" ]]; then export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH; else brew install haskell-stack; fi
+- if [[ $HVR = "true" ]]; then export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH; else brew update && brew install haskell-stack; fi
 install:
 - chmod +x configure.hs && ./configure.hs
 - if [[ $HVR = "true" ]]; then cabal update && cabal install --only-dependencies --enable-tests --force-reinstalls; fi
