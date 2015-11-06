@@ -63,3 +63,4 @@ deploy:
     file: sync-mht-osx
     on:
       condition: $HVR = "false"
+      tags: true
