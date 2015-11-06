@@ -4,6 +4,8 @@
 [![codecov.io](https://img.shields.io/codecov/c/github/ekarayel/sync-mht.svg)](http://codecov.io/github/ekarayel/sync-mht?branch=master)
 [![Hackage](https://img.shields.io/hackage/v/sync-mht.svg)](http://hackage.haskell.org/package/sync-mht)
 [![Release](https://img.shields.io/github/release/ekarayel/sync-mht.svg)](https://github.com/ekarayel/sync-mht/releases)
+[![Stackage LTS 3](http://stackage.org/package/sync-mht/badge/lts-3)](http://stackage.org/lts-3/package/sync-mht)
+[![Stackage Nightly](http://stackage.org/package/sync-mht/badge/nightly)](http://stackage.org/nightly/package/sync-mht)
 
 ## Synopsis
 Fast incremental file transfer using Merkle-Hash-Trees
