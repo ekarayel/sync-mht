@@ -42,7 +42,13 @@ updating files that are already in the target directory - not matching the conte
 directory and deleting files that are in the destination directory but not in the source directory.
 
 ## Setup
-Installing sync-mht can be done using [stack](https://github.com/commercialhaskell/stack) with the
+Installing the latest release of sync-mht with [stack](https://github.com/commercialhaskell/stack):
+```
+stack install sync-mht
+```
+
+## Contribution
+If you want to contribute - cloning the latest commit and building can be done using the
 following steps:
 
 ```
