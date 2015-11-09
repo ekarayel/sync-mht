@@ -70,6 +70,7 @@ main =
            , "        , directory >=1.2 && <1.3"
            , "        , temporary >= 1.2 && < 1.3"
            , "    hs-source-dirs: src"
+           , "    default-language: Haskell2010"
            , "test-suite main"
            , "    type: exitcode-stdio-1.0"
            , "    main-is: Test.hs"
