@@ -80,25 +80,37 @@ data Progress
     , pg_last :: IORef UTCTime
     }
 
-checkClockDiff :: (ClientMonad m) => ClientServerOptions -> m Bool
+checkClockDiff :: (ClientMonad m) => ClientServerOptions -> m (Maybe T.Text)
 checkClockDiff opts
     | Just (realToFrac -> treshold, realToFrac -> skew) <- cs_compareClocks opts =
         do t0 <- liftIO getCurrentTime
            t1 <- liftM (addUTCTime skew) queryTime
            t2 <- liftIO getCurrentTime
-           return $ and [ diffUTCTime t0 t1 < treshold, diffUTCTime t1 t2 < treshold ]
-    | otherwise = return True
+           case (and [ diffUTCTime t0 t1 < treshold, diffUTCTime t1 t2 < treshold ]) of
+             False ->
+                 return $ Just $ T.concat
+                     [ "Warning: Server and client clocks are apart by at least "
+                     , showText treshold, " seconds!"
+                     ]
+             True ->
+                 return Nothing
+    | otherwise = return Nothing
 
-abstractClient :: (ClientMonad m) => ClientServerOptions -> FilePath -> Trie Entry -> m ()
+abstractClient ::
+    (ClientMonad m)
+    => ClientServerOptions
+    -> FilePath
+    -> Trie Entry
+    -> m (Maybe T.Text)
 abstractClient cs fp trie =
     do drift <- checkClockDiff cs
        case drift of
-         True -> syncClient cs fp trie
-         False ->
-             do True <- terminateReq
-                return ()
+         Nothing -> syncClient cs fp trie
+         Just msg ->
+             do True <- terminateReq (Just msg)
+                return (Just msg)
 
-syncClient :: (ClientMonad m) => ClientServerOptions -> FilePath -> Trie Entry -> m ()
+syncClient :: (ClientMonad m) => ClientServerOptions -> FilePath -> Trie Entry -> m (Maybe T.Text)
 syncClient cs fp trie =
     do logClient $ T.concat [ "Hash of destination directory: ", showText $ t_hash trie, "\n" ]
        Diff oent nent <- nodeReq (rootLocation, trie)
@@ -128,8 +140,8 @@ syncClient cs fp trie =
        mapM_ (syncNewOrChangedEntries progress fp)
            $ groupBy ((==) `on` levelOf) $ sort $ updateEntries
        logClient "Done.                                                                       \n"
-       True <- terminateReq
-       return ()
+       True <- terminateReq Nothing
+       return Nothing
 
 _CONCURRENT_FILETRANSFER_SIZE_ :: Int
 _CONCURRENT_FILETRANSFER_SIZE_ = 48

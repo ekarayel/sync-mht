@@ -19,7 +19,7 @@ class Monad m => Protocol m where
     logReq :: T.Text -> m Bool
     queryFileReq :: Path -> m QueryFileResponse
     queryFileContReq :: ContHandle -> m QueryFileResponse
-    terminateReq :: m Bool
+    terminateReq :: Maybe T.Text -> m Bool
     queryTime :: m UTCTime
 
 data ContHandle = ContHandle Int
@@ -43,7 +43,7 @@ data Request
     | Log T.Text
     | QueryFile Path
     | QueryFileCont ContHandle
-    | Terminate
+    | Terminate (Maybe T.Text)
     | QueryTime
     deriving (Generic)
 

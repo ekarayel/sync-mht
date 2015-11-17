@@ -56,7 +56,7 @@ instance Protocol ServerMonad where
            put $ s { st_handles = M.insert n h (st_handles s), st_nextHandle = n + 1 }
            withHandle h n
     queryTime = liftIO getCurrentTime
-    terminateReq = return True
+    terminateReq _ = return True
 
 -- | Respond to a queryFile or queryFileCont request for a given file handle and id
 withHandle :: Handle -> Int -> ServerMonad QueryFileResponse

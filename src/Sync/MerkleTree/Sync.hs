@@ -30,6 +30,7 @@ import Data.ByteString(ByteString)
 import qualified Data.Bytes.Serial as SE
 import qualified Data.Bytes.Put as P
 import qualified Data.ByteString as BS
+import qualified Data.Text as T
 import qualified System.IO.Streams as ST
 import qualified System.IO.Streams.Concurrent as ST
 import qualified Test.HUnit as H
@@ -65,7 +66,7 @@ instance Protocol RequestMonad where
     queryFileContReq = request . QueryFileCont
     logReq = request . Log
     queryTime = request QueryTime
-    terminateReq = request Terminate
+    terminateReq = request . Terminate
 
 instance ClientMonad RequestMonad where
     split = splitRequests
@@ -81,8 +82,15 @@ child :: StreamPair -> IO ()
 child streams =
     do launchMessage <- getFromInputStream (sp_in streams)
        serverOrClient (read launchMessage) streams
+       return ()
 
-parent :: StreamPair -> FilePath -> FilePath -> Direction -> ClientServerOptions -> IO ()
+parent ::
+    StreamPair
+    -> FilePath
+    -> FilePath
+    -> Direction
+    -> ClientServerOptions
+    -> IO (Maybe T.Text)
 parent streams source destination direction clientServerOpts =
     case direction of
       FromRemote ->
@@ -103,14 +111,14 @@ parent streams source destination direction clientServerOpts =
 respond :: (SE.Serial a) => OutputStream ByteString -> a -> IO ()
 respond os = mapM_ (flip ST.write os . Just) . (:[BS.empty]) . P.runPutS . SE.serialize
 
-local :: ClientServerOptions -> FilePath -> FilePath -> IO ()
+local :: ClientServerOptions -> FilePath -> FilePath -> IO (Maybe T.Text)
 local cs source destination =
     do sourceDir <- liftM (mkTrie 0) $ analyse source (cs_ignore cs)
        destinationDir <- liftM (mkTrie 0) $ analyse destination (cs_ignore cs)
        serverState <- startServerState source sourceDir
        evalStateT (abstractClient cs destination destinationDir) serverState
 
-serverOrClient :: LaunchMessage -> StreamPair -> IO ()
+serverOrClient :: LaunchMessage -> StreamPair -> IO (Maybe T.Text)
 serverOrClient lm streams
     | lm_protocolVersion lm == thisProtocolVersion =
         let side =
@@ -121,7 +129,7 @@ serverOrClient lm streams
               side entries (lm_dir lm) streams
     | otherwise = fail "Incompatible sync-mht versions."
 
-server :: [Entry] -> FilePath -> StreamPair -> IO ()
+server :: [Entry] -> FilePath -> StreamPair -> IO (Maybe T.Text)
 server entries fp streams = (startServerState fp $ mkTrie 0 entries) >>= evalStateT loop
     where
        serverRespond = liftIO . respond (sp_out streams)
@@ -134,9 +142,9 @@ server entries fp streams = (startServerState fp $ mkTrie 0 entries) >>= evalSta
                 QueryFileCont c -> queryFileContReq c >>= serverRespond >> loop
                 Log t -> logReq t >>= serverRespond >> loop
                 QueryTime -> queryTime >>= serverRespond >> loop
-                Terminate -> terminateReq >>= serverRespond
+                Terminate mMsg -> (terminateReq mMsg >>= serverRespond) >> return mMsg
 
-client :: ClientServerOptions -> [Entry] -> FilePath -> StreamPair -> IO ()
+client :: ClientServerOptions -> [Entry] -> FilePath -> StreamPair -> IO (Maybe T.Text)
 client cs entries fp streams =
     runRequestMonad (sp_in streams) (sp_out streams) $ abstractClient cs fp $ mkTrie 0 entries
 

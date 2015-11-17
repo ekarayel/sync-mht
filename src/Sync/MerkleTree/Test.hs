@@ -18,6 +18,7 @@ import System.IO.Error
 import System.IO.Temp
 import System.Posix.Files
 import System.Random
+import qualified Data.Text as T
 import qualified Test.HUnit as H
 
 tests :: H.Test
@@ -148,17 +149,17 @@ testClockDriftFail = H.TestLabel "testClockDriftFail" $ H.TestCase $
            createDirectory srcDir
            createDirectory destDir
            writeFile (srcDir </> "new.txt") expected
-           runSync $ syncOpts { so_compareClocks = Just (10.0, -100.0) }
-           runSync $ syncOpts { so_compareClocks = Just (10.0, 100.0) }
+           Just _ <- runSync $ syncOpts { so_compareClocks = Just (10.0, -100.0) }
+           Just _ <- runSync $ syncOpts { so_compareClocks = Just (10.0, 100.0) }
            (doesFileExist $ destDir </> "new.txt") >>= (False H.@=?)
-           runSync $ syncOpts { so_compareClocks = Just (10.0, 0.0) }
+           Nothing <- runSync $ syncOpts { so_compareClocks = Just (10.0, 0.0) }
            got <- readFile  $ destDir </> "new.txt"
            expected H.@=? got
 
 runMain :: [String] -> IO ()
 runMain = main ""
 
-runSync :: SyncOptions -> IO ()
+runSync :: SyncOptions -> IO (Maybe T.Text)
 runSync = run ""
 
 testHelp :: H.Test
@@ -176,21 +177,22 @@ testHelp = H.TestLabel "testHelp" $ H.TestCase $
            createDirectory srcDir
            createDirectory destDir
            writeFile (srcDir </> "new.txt") data_
-           mapM (runSync) $
-               [ syncOpts { so_nonOptions = ["foo", "bar"] }
-               , syncOpts { so_source = Just $ "remote:" ++ srcDir }
-               , syncOpts { so_source = Nothing }
-               , syncOpts { so_destination = Nothing }
-               , syncOpts { so_source = Nothing, so_destination = Nothing }
-               , defaultSyncOptions
-               , syncOpts { so_remote = Just $ RemoteCmd "/bin/true" }
-               , syncOpts { so_destination = Just $ "remote:" ++ destDir }
-               , syncOpts { so_help = True }
-               , syncOpts
-                 { so_source = Just $ "remote:" ++ srcDir
-                 , so_destination = Just $ "remote:" ++ destDir
-                 , so_remote = Just $ RemoteCmd "/bin/true"
-                 } ]
+           Just _ <- runSync $ syncOpts { so_nonOptions = ["foo", "bar"] }
+           Just _ <- runSync $ syncOpts { so_source = Just $ "remote:" ++ srcDir }
+           Just _ <- runSync $ syncOpts { so_destination = Just $ "remote:" ++ destDir }
+           Just _ <- runSync $ syncOpts { so_source = Nothing }
+           Just _ <- runSync $ syncOpts { so_destination = Nothing }
+           Just _ <- runSync $ syncOpts { so_source = Nothing, so_destination = Nothing }
+           Just _ <- runSync defaultSyncOptions
+           Just _ <- runSync $ syncOpts { so_remote = Just $ RemoteCmd "/bin/true" }
+           Just _ <-
+               runSync $ syncOpts
+                   { so_source = Just $ "remote:" ++ srcDir
+                   , so_destination = Just $ "remote:" ++ destDir
+                   , so_remote = Just $ RemoteCmd "/bin/true"
+                   }
+           Nothing <- runSync $ syncOpts { so_help = True }
+           Nothing <- runSync $ syncOpts { so_version = True }
            (doesFileExist $ destDir </> "new.txt") >>= (False H.@=?)
 
 testExit :: H.Test
@@ -209,6 +211,7 @@ testExit = H.TestLabel "testExit" $ H.TestCase $
                         , so_remote = Just $ RemoteCmd "exit"
                         , so_add = True
                         }
+                  return ()
 
 testOptions :: H.Test
 testOptions = H.TestLabel "testOptions" $ H.TestCase $

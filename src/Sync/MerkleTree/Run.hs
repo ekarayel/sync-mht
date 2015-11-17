@@ -104,9 +104,9 @@ putError = hPutStrLn stderr
 _HIDDENT_CLIENT_MODE_OPTION_ :: String
 _HIDDENT_CLIENT_MODE_OPTION_ = "--hidden-client-mode-option"
 
-printUsageInfo :: String -> [String] -> IO ()
-printUsageInfo version prefix =
-    mapM_ putError (prefix ++ [usageInfo header optDescriptions] ++ [details])
+printUsageInfo :: String -> IO ()
+printUsageInfo version =
+    mapM_ putError ([usageInfo header optDescriptions] ++ [details])
     where
       header = unlines
           [ "Usage: sync-mht [OPTIONS..]"
@@ -134,39 +134,46 @@ main version args = flip catchIOError (putError . show) $
     do let parsedOpts = getOpt (ReturnInOrder parseNonOption) optDescriptions args
        case () of
          () | [_HIDDENT_CLIENT_MODE_OPTION_] == args -> runChild
-            | (options,[],[]) <- parsedOpts -> run version $ toSyncOptions options
-            | (_,_,errs) <- parsedOpts -> printUsageInfo version errs
+            | (options,[],[]) <- parsedOpts ->
+                do mMsg <- run version $ toSyncOptions options
+                   case mMsg of
+                     Just err -> fail $ T.unpack err
+                     Nothing -> return ()
+            | (_,_,errs) <- parsedOpts -> fail $ concat $ map (++"\n") errs
 
-run :: String -> SyncOptions -> IO ()
+run :: String -> SyncOptions -> IO (Maybe T.Text)
 run version so
-    | so_help so = usage []
-    | so_version so = putStrLn version
+    | so_help so = usage >> return Nothing
+    | so_version so = putStrLn version >> return Nothing
     | not (null (so_nonOptions so)) =
-        usage ["Unrecognized options: " ++ intercalate ", " (so_nonOptions so)]
+        return $ Just $ T.concat
+             [ "Unrecognized options: "
+             , T.intercalate ", " (map T.pack $ so_nonOptions so)
+             ]
     | Just source <- so_source so, Just destination <- so_destination so =
         do cs <- toClientServerOptions so
            case (parseFilePath source, parseFilePath destination) of
-             (Remote _, Remote _) -> usage [doubleRemote]
+             (Remote _, Remote _) -> return $ Just doubleRemote
              (Local source', Local destination')
-                 | Just _ <- so_remote so -> usage [missingRemote]
+                 | Just _ <- so_remote so -> return $ Just missingRemote
                  | otherwise -> local cs source' destination'
              (Remote source', Local destination')
                  | Just remoteCmd <- so_remote so ->
                      runParent cs remoteCmd source' destination' FromRemote
-                 | otherwise -> usage [missingRemoteCmd]
+                 | otherwise -> return $ Just missingRemoteCmd
              (Local source', Remote destination')
                  | Just remoteCmd <- so_remote so ->
                      runParent cs remoteCmd source' destination' ToRemote
-                 | otherwise -> usage [missingRemoteCmd]
+                 | otherwise -> return $ Just missingRemoteCmd
     | otherwise =
         do let missingOpts =
-                intercalate ", " $ map snd $ filter ((== Nothing) . ($ so) . fst)
-                [(so_source, "--source"),(so_destination, "--destination")]
-           usage ["The options " ++ missingOpts ++ " are required."]
+                T.intercalate ", " $ map snd $ filter ((== Nothing) . ($ so) . fst)
+                [(so_source, "--source"), (so_destination, "--destination")]
+           return $ Just $ T.concat ["The options ", missingOpts, " are required."]
     where
       usage = printUsageInfo version
       doubleRemote = "Either the directory given in --source or --destination must be local."
-      missingRemote = concat
+      missingRemote = T.concat
           [ "The --remote-shell options requires that either the directory given at "
           , "--source or --destination is at remote site. (Indicated by the prefix: 'remote:')"
           ]
@@ -177,25 +184,33 @@ runChild =
      do streams <- openStreams stdin stdout
         child streams
 
-runParent :: ClientServerOptions -> RemoteCmd -> FilePath -> FilePath -> Direction -> IO ()
+runParent ::
+    ClientServerOptions
+    -> RemoteCmd
+    -> FilePath
+    -> FilePath
+    -> Direction
+    -> IO (Maybe T.Text)
 runParent clientServerOpts mRemoteCmd source destination dir =
-    do parentStreams <-
+    do (exitAction, parentStreams) <-
            case mRemoteCmd of
              RemoteCmd remoteCmd ->
                  do let remoteCmd' = remoteCmd ++ " " ++ _HIDDENT_CLIENT_MODE_OPTION_
-                    (Just hIn, Just hOut, Nothing, _ph) <-
+                    (Just hIn, Just hOut, Nothing, ph) <-
                         createProcess $ (shell remoteCmd')
                         { std_in = CreatePipe
                         , std_out = CreatePipe
                         }
-                    openStreams hOut hIn
+                    parentStreams <- openStreams hOut hIn
+                    return (waitForProcess ph >> return (), parentStreams)
              Simulate ->
                  do (parentInStream, childOutStream) <- mkChanStreams
                     (childInStream, parentOutStream) <- mkChanStreams
-                    _ <- forkIO $ child $
-                        StreamPair
-                        { sp_in = childInStream
-                        , sp_out = childOutStream
-                        }
-                    return $ StreamPair { sp_in = parentInStream, sp_out = parentOutStream }
-       parent parentStreams source destination dir clientServerOpts
+                    childTerminated <- newEmptyMVar
+                    let childStrs = StreamPair { sp_in = childInStream, sp_out = childOutStream }
+                    let parentStrs = StreamPair { sp_in = parentInStream, sp_out = parentOutStream }
+                    _ <- forkFinally (child childStrs) (const $ putMVar childTerminated ())
+                    return (takeMVar childTerminated, parentStrs)
+       exitMsg <- parent parentStreams source destination dir clientServerOpts
+       exitAction
+       return exitMsg
