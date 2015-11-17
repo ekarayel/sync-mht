@@ -3,9 +3,9 @@
 module Sync.MerkleTree.Run where
 
 import Control.Concurrent
+import Control.Concurrent.MVar
 import Control.Monad
 import Data.List
-
 import System.Console.GetOpt
 import System.Exit
 import System.IO
@@ -102,9 +102,6 @@ toSyncOptions = foldl (flip id) defaultSyncOptions
 putError :: String -> IO ()
 putError = hPutStrLn stderr
 
-_HIDDENT_CLIENT_MODE_OPTION_ :: String
-_HIDDENT_CLIENT_MODE_OPTION_ = "--hidden-client-mode-option"
-
 printUsageInfo :: String -> IO ()
 printUsageInfo version =
     mapM_ putError ([usageInfo header optDescriptions] ++ [details])
@@ -135,7 +132,7 @@ main version args = flip catchIOError (putError . show) $
     do let parsedOpts = getOpt (ReturnInOrder parseNonOption) optDescriptions args
            exit err = hPutStrLn stderr err >> exitFailure
        case () of
-         () | [_HIDDENT_CLIENT_MODE_OPTION_] == args -> runChild
+         () | [] == args -> runChild
             | (options,[],[]) <- parsedOpts ->
                 do mMsg <- run version $ toSyncOptions options
                    case mMsg of
@@ -181,10 +178,19 @@ run version so
           ]
       missingRemoteCmd = "The --remote-shell is required when the prefix 'remote:' is used."
 
+_WAIT_FOR_INPUT_ :: Int
+_WAIT_FOR_INPUT_ = 1000 * 1000 * 3
+
 runChild :: IO ()
 runChild =
-     do streams <- openStreams stdin stdout
-        child streams
+     do gotMessage <- newEmptyMVar
+        streams <- openStreams stdin stdout
+        _ <- forkIO $
+            do threadDelay _WAIT_FOR_INPUT_
+               r <- isEmptyMVar gotMessage
+               when r $ putError
+                   "Running in server mode. (The command `sync-mht --help` prints usage info.)"
+        child gotMessage streams
 
 runParent ::
     ClientServerOptions
@@ -197,9 +203,8 @@ runParent clientServerOpts mRemoteCmd source destination dir =
     do (exitAction, parentStreams) <-
            case mRemoteCmd of
              RemoteCmd remoteCmd ->
-                 do let remoteCmd' = remoteCmd ++ " " ++ _HIDDENT_CLIENT_MODE_OPTION_
-                    (Just hIn, Just hOut, Nothing, ph) <-
-                        createProcess $ (shell remoteCmd')
+                 do (Just hIn, Just hOut, Nothing, ph) <-
+                        createProcess $ (shell remoteCmd)
                         { std_in = CreatePipe
                         , std_out = CreatePipe
                         }
@@ -214,9 +219,10 @@ runParent clientServerOpts mRemoteCmd source destination dir =
                  do (parentInStream, childOutStream) <- mkChanStreams
                     (childInStream, parentOutStream) <- mkChanStreams
                     childTerminated <- newEmptyMVar
+                    running <- newEmptyMVar
                     let childStrs = StreamPair { sp_in = childInStream, sp_out = childOutStream }
                     let parentStrs = StreamPair { sp_in = parentInStream, sp_out = parentOutStream }
-                    _ <- forkFinally (child childStrs) (const $ putMVar childTerminated ())
+                    _ <- forkFinally (child running childStrs) (const $ putMVar childTerminated ())
                     return (takeMVar childTerminated, parentStrs)
        exitMsg <- parent parentStreams source destination dir clientServerOpts
        exitAction

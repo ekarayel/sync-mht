@@ -15,6 +15,7 @@ module Sync.MerkleTree.Sync
     ) where
 
 import Control.Concurrent(newChan)
+import Control.Concurrent.MVar
 import Control.Monad
 import Control.Monad.State
 import Data.Monoid
@@ -78,9 +79,10 @@ data Direction
     = FromRemote
     | ToRemote
 
-child :: StreamPair -> IO ()
-child streams =
+child :: MVar () -> StreamPair -> IO ()
+child gotMessage streams =
     do launchMessage <- getFromInputStream (sp_in streams)
+       putMVar gotMessage ()
        _ <- serverOrClient (read launchMessage) streams
        return ()
 
@@ -181,7 +183,8 @@ tests = H.TestList $
                                 }
                             }
                         out <- ST.nullOutput
-                        child $ StreamPair { sp_in = inst, sp_out = out }
+                        r <- newEmptyMVar
+                        child r $ StreamPair { sp_in = inst, sp_out = out }
                         return False
                  True H.@=? r
     ]
