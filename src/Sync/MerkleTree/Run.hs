@@ -133,14 +133,15 @@ parseFilePath fp
 main :: String -> [String] -> IO ()
 main version args = flip catchIOError (putError . show) $
     do let parsedOpts = getOpt (ReturnInOrder parseNonOption) optDescriptions args
+           exit err = hPutStrLn stderr err >> exitFailure
        case () of
          () | [_HIDDENT_CLIENT_MODE_OPTION_] == args -> runChild
             | (options,[],[]) <- parsedOpts ->
                 do mMsg <- run version $ toSyncOptions options
                    case mMsg of
-                     Just err -> die $ T.unpack err
+                     Just err -> exit $ T.unpack err
                      Nothing -> return ()
-            | (_,_,errs) <- parsedOpts -> die $ concat $ map (++"\n") errs
+            | (_,_,errs) <- parsedOpts -> exit $ concat $ map (++"\n") errs
 
 run :: String -> SyncOptions -> IO (Maybe T.Text)
 run version so
