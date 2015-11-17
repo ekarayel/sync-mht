@@ -81,7 +81,7 @@ data Direction
 child :: StreamPair -> IO ()
 child streams =
     do launchMessage <- getFromInputStream (sp_in streams)
-       serverOrClient (read launchMessage) streams
+       _ <- serverOrClient (read launchMessage) streams
        return ()
 
 parent ::
@@ -160,7 +160,7 @@ tests = H.TestList $
                 connect (sp_in st) (sp_out st)
                 hClose hIn
                 hClose hOut
-                got <- readFile (dir </> "write.out")
+                got <- readFile $ dir </> "write.out"
                 testStr H.@=? got
     , H.TestLabel "testProtocolVersion" $ H.TestCase $
           withSystemTempDirectory "testProtocolVersion" $ \dir ->

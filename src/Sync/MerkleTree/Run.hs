@@ -7,6 +7,7 @@ import Control.Monad
 import Data.List
 
 import System.Console.GetOpt
+import System.Exit
 import System.IO
 import System.IO.Error
 import System.Process
@@ -137,9 +138,9 @@ main version args = flip catchIOError (putError . show) $
             | (options,[],[]) <- parsedOpts ->
                 do mMsg <- run version $ toSyncOptions options
                    case mMsg of
-                     Just err -> fail $ T.unpack err
+                     Just err -> die $ T.unpack err
                      Nothing -> return ()
-            | (_,_,errs) <- parsedOpts -> fail $ concat $ map (++"\n") errs
+            | (_,_,errs) <- parsedOpts -> die $ concat $ map (++"\n") errs
 
 run :: String -> SyncOptions -> IO (Maybe T.Text)
 run version so
@@ -147,9 +148,9 @@ run version so
     | so_version so = putStrLn version >> return Nothing
     | not (null (so_nonOptions so)) =
         return $ Just $ T.concat
-             [ "Unrecognized options: "
-             , T.intercalate ", " (map T.pack $ so_nonOptions so)
-             ]
+            [ "Unrecognized options: "
+            , T.intercalate ", " (map T.pack $ so_nonOptions so)
+            ]
     | Just source <- so_source so, Just destination <- so_destination so =
         do cs <- toClientServerOptions so
            case (parseFilePath source, parseFilePath destination) of
@@ -169,7 +170,7 @@ run version so
         do let missingOpts =
                 T.intercalate ", " $ map snd $ filter ((== Nothing) . ($ so) . fst)
                 [(so_source, "--source"), (so_destination, "--destination")]
-           return $ Just $ T.concat ["The options ", missingOpts, " are required."]
+           return $ Just $ T.concat [ "The options ", missingOpts, " are required." ]
     where
       usage = printUsageInfo version
       doubleRemote = "Either the directory given in --source or --destination must be local."
@@ -202,7 +203,12 @@ runParent clientServerOpts mRemoteCmd source destination dir =
                         , std_out = CreatePipe
                         }
                     parentStreams <- openStreams hOut hIn
-                    return (waitForProcess ph >> return (), parentStreams)
+                    let shutdown =
+                            do hClose hIn
+                               hClose hOut
+                               waitForProcess ph
+                               return ()
+                    return (shutdown, parentStreams)
              Simulate ->
                  do (parentInStream, childOutStream) <- mkChanStreams
                     (childInStream, parentOutStream) <- mkChanStreams
