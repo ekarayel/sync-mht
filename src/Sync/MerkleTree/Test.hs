@@ -1,6 +1,7 @@
 module Sync.MerkleTree.Test where
 
 import Control.Concurrent
+import Control.Exception
 import Control.Monad
 import Data.Ix
 import Data.List
@@ -24,11 +25,11 @@ import qualified Test.HUnit as H
 tests :: H.Test
 tests = H.TestList $
     [ testClockDriftFail
+    , testCmdLineFail
     , testOptions
     , testBigFile
     , testHelp
     , testCmdLine
-    , testCmdLineFail
     , testExit
     , testEntry
     , testIgnoreBoring
@@ -126,9 +127,9 @@ testCmdLineFail = H.TestLabel "testCmdLineFail" $ H.TestCase $
            createDirectory srcDir
            createDirectory destDir
            writeFile (srcDir </> "new.txt") expected
-           runMain ["-s",srcDir,"-d",destDir,"foo","bar"]
+           shouldFail $ runMain ["-s",srcDir,"-d",destDir,"foo","bar"]
            runMain ["-s",srcDir,"-d","remote:"++destDir,"-r","exit 0"]
-           runMain ["-foobar"]
+           shouldFail $ runMain ["-foobar"]
            runMain ["--help"]
            runMain ["-s",srcDir,"-d",destDir]
            (doesFileExist $ destDir </> "new.txt") >>= (False H.@=?)
@@ -306,7 +307,11 @@ mkRandomDir md fps =
                                 setFileTimes (fp </> n) (utcTimeFrom d) (utcTimeFrom d)
 
 doesThrowIOError :: IO () -> IO Bool
-doesThrowIOError a = catchIOError (a >>= (return . (`seq` False))) (return .  (`seq` True))
+doesThrowIOError a =
+    do r <- try (a >> return False)
+       case r of
+         Left (SomeException _) -> return True
+         Right x -> return x
 
 shouldFail :: IO () -> IO ()
 shouldFail action = doesThrowIOError action >>= (True H.@=?)
