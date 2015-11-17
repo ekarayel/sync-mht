@@ -60,7 +60,7 @@ data ProtocolVersion = ProtocolVersion !Int
     deriving (Read, Show, Eq)
 
 thisProtocolVersion :: ProtocolVersion
-thisProtocolVersion = ProtocolVersion 4
+thisProtocolVersion = ProtocolVersion 5
 
 data LaunchMessage
     = LaunchMessage
