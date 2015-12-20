@@ -17,13 +17,13 @@ matrix:
         sources:
         - hvr-ghc
   - os: linux
-    env: CABALVER=1.22 GHCVER=7.10.2 HVR=true
+    env: CABALVER=1.22 GHCVER=7.10.3 HVR=true
     jdk: oraclejdk8
     addons:
       apt:
         packages:
         - cabal-install-1.22
-        - ghc-7.10.2
+        - ghc-7.10.3
         sources:
         - hvr-ghc
   - os: osx
