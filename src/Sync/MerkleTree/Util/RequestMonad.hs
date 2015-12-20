@@ -145,7 +145,6 @@ writerThread os chan = loop
              ST.write (Just "") os
              maybe (return ()) (const loop) mBs
 
-
 receiverThread ::
     IORef Int
     -> SendQueue

@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE OverloadedStrings #-}
 import Data.Version (showVersion)
 import Paths_sync_mht (version)
 import System.Environment
