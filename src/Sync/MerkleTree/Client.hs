@@ -189,7 +189,7 @@ synchronizeNewOrChangedEntry pg fp entry =
              loop firstResult
              liftIO $ hClose h
              liftIO $ modifyIORef (pg_count pg) (subtract 1)
-             let modTime = (CTime $ unModTime $ f_modtime f)
+             let modTime = (CTime $ fromIntegral $ unModTime $ f_modtime f)
              liftIO $ setFileTimes (toFilePath fp $ f_name f) modTime modTime
       DirectoryEntry p ->
           do liftIO $ modifyIORef (pg_count pg) (subtract 1)

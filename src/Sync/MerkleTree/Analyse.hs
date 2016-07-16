@@ -58,7 +58,7 @@ analyseEntry fp ignore path name
                   [ FileEntry $ File
                     { f_name = path'
                     , f_size = FileSize filesize
-                    , f_modtime = FileModTime modtime
+                    , f_modtime = FileModTime $ fromIntegral modtime
                     } ]
           | isDirectory status =
               liftM ((DirectoryEntry path'):) $ analyseSubDirectory fp' ignore path'
