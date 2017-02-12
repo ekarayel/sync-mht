@@ -7,8 +7,8 @@ main =
     do let name = "sync-mht"
            buildParams =
                [ "    build-depends: "
-               , "        base >=4.7 && <4.9"
-               , "        , unix >=2.7"
+               , "        base >=4.7"
+               , "        , unix-compat >=0.4"
                , "        , directory >=1.2"
                , "        , filepath >=1.3"
                , "        , process >= 1.2"

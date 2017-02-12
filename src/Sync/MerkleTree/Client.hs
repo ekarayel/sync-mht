@@ -20,7 +20,7 @@ import Sync.MerkleTree.Trie
 import Sync.MerkleTree.Types
 import System.Directory
 import System.IO
-import System.Posix.Files
+import System.PosixCompat.Files
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Foldable as F

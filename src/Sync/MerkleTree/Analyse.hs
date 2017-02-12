@@ -15,8 +15,8 @@ import Foreign.C.Types
 import Prelude hiding (lookup)
 import Sync.MerkleTree.Types
 import System.Directory
+import System.PosixCompat.Files
 import System.Posix.Types
-import System.Posix.Files
 import Text.Regex (matchRegex, mkRegex, Regex)
 import qualified Data.Text as T
 
