@@ -13,11 +13,10 @@ import Sync.MerkleTree.Run
 import Sync.MerkleTree.Client
 import System.Directory
 import System.FilePath
-import System.Posix.Files
 import System.IO
 import System.IO.Error
 import System.IO.Temp
-import System.Posix.Files
+import System.PosixCompat.Files
 import System.Random
 import qualified Data.Text as T
 import qualified Test.HUnit as H
