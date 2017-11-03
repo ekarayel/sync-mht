@@ -13,6 +13,8 @@ import Data.Maybe
 import System.FilePath
 import Foreign.C.Types
 import Prelude hiding (lookup)
+import System.IO (hPutStrLn, stderr)
+import Control.Exception (try)
 import Sync.MerkleTree.Types
 import System.Directory
 import System.PosixCompat.Files
@@ -45,8 +47,7 @@ analyseEntry :: FilePath -> [Regex] -> Path -> String -> IO [Entry]
 analyseEntry fp ignore path name
     | shouldIgnore path' ignore = return []
     | otherwise =
-        do status <- getFileStatus fp'
-           analyse' status
+          lstat fp' >>= maybe (return []) analyse'
     where
       path' = Path (T.pack name) path
       fp' = fp </> name
@@ -63,3 +64,12 @@ analyseEntry fp ignore path name
           | isDirectory status =
               liftM ((DirectoryEntry path'):) $ analyseSubDirectory fp' ignore path'
           | otherwise = return [] -- No support for devices, sockets yet.
+
+lstat :: FilePath -> IO (Maybe FileStatus)
+lstat p = do
+    ls <- try (getSymbolicLinkStatus p) :: IO (Either IOError FileStatus)
+    case ls of
+        Left e -> do
+            hPutStrLn stderr $ show e
+            return Nothing
+        Right s -> return $ Just s
