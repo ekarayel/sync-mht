@@ -13,7 +13,7 @@ Fast incremental file transfer using Hash-Trees
 
 ## Description
 A command line tool that can be used to incrementally synchronize a directory hierarchy with a
-second one. It is using a Merkle-Hash-Tree to compare the folders, such that the synchronization
+second one. It is using a Hash-Tree to compare the folders, such that the synchronizatio
 time and communication (round) complexity grows only logarithmically with the size of the
 directories (assuming the actual difference of the directories is small).
 
