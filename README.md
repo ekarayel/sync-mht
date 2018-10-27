@@ -8,7 +8,8 @@
 [![Stackage Nightly](http://stackage.org/package/sync-mht/badge/nightly)](http://stackage.org/nightly/package/sync-mht)
 
 ## Synopsis
-Fast incremental file transfer using Merkle-Hash-Trees
+
+Fast incremental file transfer using Hash-Trees
 
 ## Description
 A command line tool that can be used to incrementally synchronize a directory hierarchy with a
