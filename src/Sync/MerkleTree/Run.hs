@@ -3,7 +3,7 @@
 module Sync.MerkleTree.Run where
 
 import Control.Concurrent
-import Control.Concurrent.MVar
+import Control.Concurrent.MVar()
 import Control.Monad
 import Data.List
 import System.Console.GetOpt
@@ -109,7 +109,7 @@ printUsageInfo version =
       header = unlines
           [ "Usage: sync-mht [OPTIONS..]"
           , ""
-          , "Fast incremental file transfer using Merkle-Hash-Trees (Version: " ++ version ++ ")"
+          , "Fast incremental file transfer using Hash-Trees (Version: " ++ version ++ ")"
           ]
       details = unlines
           [ "Note: The argument to the --remote-shell option should be a CMD running sync-mht"
@@ -212,7 +212,7 @@ runParent clientServerOpts mRemoteCmd source destination dir =
                     let shutdown =
                             do hClose hIn
                                hClose hOut
-                               waitForProcess ph
+                               _ <- waitForProcess ph
                                return ()
                     return (shutdown, parentStreams)
              Simulate ->

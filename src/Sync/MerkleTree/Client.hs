@@ -8,7 +8,7 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Codec.Compression.GZip
 import Data.Function
-import Data.Monoid(Monoid, mempty, mappend, Sum(..))
+import Data.Monoid(Sum(..))
 import Data.Set(Set)
 import Data.Time.Clock
 import Data.List
@@ -31,9 +31,11 @@ import qualified Test.HUnit as H
 
 data Diff a = Diff (Set a) (Set a)
 
+instance Ord a => Semigroup (Diff a) where
+    (<>) (Diff x1 y1) (Diff x2 y2) = Diff (x1 `S.union` x2) (y1 `S.union` y2)
+
 instance Ord a => Monoid (Diff a) where
     mempty = Diff S.empty S.empty
-    mappend (Diff x1 y1) (Diff x2 y2) = Diff (x1 `S.union` x2) (y1 `S.union` y2)
 
 showText :: (Show a) => a -> T.Text
 showText = T.pack . show

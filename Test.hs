@@ -4,6 +4,7 @@ import qualified Sync.MerkleTree.Test as T
 import qualified Sync.MerkleTree.Trie as TR
 import qualified Test.HUnit as H
 
+main :: IO ()
 main =
     do let allTests = H.TestList $ [T.tests, TR.tests, S.tests]
        putStrLn "Running tests:"

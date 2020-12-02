@@ -32,13 +32,11 @@ module Sync.MerkleTree.Util.RequestMonad
     , splitRequests
     ) where
 
-import Control.Applicative(Applicative(..))
 import Control.Concurrent(Chan, writeChan, readChan, newChan, forkIO)
 import Control.Monad(ap,liftM,unless)
 import Control.Monad.IO.Class(MonadIO(..))
 import Data.ByteString(ByteString)
 import Data.IORef(IORef,newIORef,modifyIORef,readIORef)
-import Data.Monoid(Monoid, mempty, mappend)
 import System.IO.Streams(InputStream, OutputStream)
 import Sync.MerkleTree.Util.GetFromInputStream
 import qualified Data.Bytes.Serial as SE
@@ -51,7 +49,7 @@ data RequestState f b = forall a. (SE.Serial a) => RequestState f (a -> RequestM
 data LiftIOState b = forall a. LiftIOState (IO a) (a -> RequestMonadT ByteString b)
 
 newtype RequestMonad b = RequestMonad { unReqMonad :: RequestMonadT ByteString b }
-    deriving (Monad, Functor, Applicative, MonadIO)
+    deriving (Monad, MonadFail, Functor, Applicative, MonadIO)
 
 data RequestMonadT f b
     = Split (SplitState f b)
@@ -69,8 +67,10 @@ instance Applicative (RequestMonadT ByteString) where
 
 instance Monad (RequestMonadT ByteString) where
     return = Return
-    fail = Fail
     (>>=) = bindImpl
+
+instance MonadFail (RequestMonadT ByteString) where
+    fail = Fail
 
 instance MonadIO (RequestMonadT ByteString) where
     liftIO x =  LiftIO $ LiftIOState x Return

@@ -1,10 +1,8 @@
 # sync-mht
 
-[![Build Status](https://travis-ci.org/ekarayel/sync-mht.svg?branch=master)](https://travis-ci.org/ekarayel/sync-mht)
-[![codecov.io](https://img.shields.io/codecov/c/github/ekarayel/sync-mht.svg)](http://codecov.io/github/ekarayel/sync-mht?branch=master)
 [![Hackage](https://img.shields.io/hackage/v/sync-mht.svg)](http://hackage.haskell.org/package/sync-mht)
 [![Release](https://img.shields.io/github/release/ekarayel/sync-mht.svg)](https://github.com/ekarayel/sync-mht/releases)
-[![Stackage LTS 6](http://stackage.org/package/sync-mht/badge/lts-6)](http://stackage.org/lts-6/package/sync-mht)
+[![Stackage LTS 6](http://stackage.org/package/sync-mht/badge/lts-16)](http://stackage.org/lts-16/package/sync-mht)
 [![Stackage Nightly](http://stackage.org/package/sync-mht/badge/nightly)](http://stackage.org/nightly/package/sync-mht)
 
 ## Synopsis
@@ -44,19 +42,12 @@ copying of files to the target directory, updating files that are already in the
 not matching the contents in the source directory and deleting files that are in the destination
 directory but not in the source directory.
 
-## Setup
-Installing the latest release of sync-mht with [stack](https://github.com/commercialhaskell/stack):
-```
-stack install sync-mht
-```
-
 ## Contribution
 If you want to contribute - cloning the latest commit and building can be done using the
 following steps:
 
 ```
-git clone --recursive https://github.com/ekarayel/sync-mht.git
+git clone https://github.com/ekarayel/sync-mht.git
 cd sync-mht
-stack exec runhaskell configure.hs
 stack install
 ```

@@ -13,7 +13,7 @@ import Data.ByteString(ByteString)
 import Sync.MerkleTree.Types
 import Sync.MerkleTree.Trie
 
-class Monad m => Protocol m where
+class MonadFail m => Protocol m where
     queryHashReq :: TrieLocation -> m Fingerprint
     querySetReq :: TrieLocation -> m (Set Entry)
     logReq :: T.Text -> m Bool

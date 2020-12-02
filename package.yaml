@@ -1,0 +1,49 @@
+name: sync-mht
+github: ekarayel/sync-mht
+synopsis: Fast incremental file transfer using Hash-Trees
+description: See README at <https://github.com/ekarayel/sync-mht#readme>
+author: Emin Karayel <me@eminkarayel.de>
+category: Utility
+extra-doc-files: README.md
+
+ghc-options: -Wall
+
+library:
+  source-dirs: src
+
+dependencies:
+  - base >=4.7
+  - unix-compat >=0.4
+  - directory >=1.2
+  - filepath >=1.3
+  - process >= 1.2
+  - cryptohash >=0.11
+  - exceptions >=0.7
+  - byteable >=0.1
+  - array >=0.5
+  - containers >=0.5
+  - text >=1.1
+  - bytestring >=0.10
+  - bytes >= 0.15
+  - base16-bytestring >=0.1
+  - cereal >= 0.4
+  - io-streams >= 1.2
+  - transformers >= 0.3
+  - regex-compat >= 0.95
+  - mtl >= 2.1
+  - zlib >= 0.5
+  - time >= 1.4
+  - random >= 1.0
+  - HUnit >= 1.2
+  - temporary >= 1.2
+ 
+executable:
+  main: Main.hs
+  dependencies:
+    - sync-mht
+
+tests:
+  spec:
+    main: Test.hs
+    dependencies:
+      - sync-mht

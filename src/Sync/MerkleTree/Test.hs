@@ -1,20 +1,14 @@
 module Sync.MerkleTree.Test where
 
-import Control.Concurrent
 import Control.Exception
 import Control.Monad
-import Data.Ix
 import Data.List
-import Data.Time.Calendar
-import Data.Time.Clock
 import Foreign.C.Types
 import Sync.MerkleTree.Analyse
 import Sync.MerkleTree.Run
 import Sync.MerkleTree.Client
 import System.Directory
 import System.FilePath
-import System.IO
-import System.IO.Error
 import System.IO.Temp
 import System.PosixCompat.Files
 import System.Random

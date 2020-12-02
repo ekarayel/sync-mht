@@ -118,7 +118,7 @@ mkLeave ls =
     , t_node = Leave $ S.fromList ls
     }
 
-lookup :: (Monad m) => Trie a -> TrieLocation -> m (Trie a)
+lookup :: (MonadFail m) => Trie a -> TrieLocation -> m (Trie a)
 lookup trie (TrieLocation { tl_level = l, tl_index = i })
     | l < 0 || i < 0 || i >= degree^l = fail "illegal index pair"
     | l > 0, (g, i') <- i `quotRem` (degree ^ (l-1)), Node arr <- t_node trie =
@@ -126,10 +126,10 @@ lookup trie (TrieLocation { tl_level = l, tl_index = i })
     | l == 0 = return trie
     | otherwise = fail "index pair to deep"
 
-queryHash :: (Monad m) => Trie a -> TrieLocation -> m Fingerprint
+queryHash :: (MonadFail m) => Trie a -> TrieLocation -> m Fingerprint
 queryHash trie = liftM toFingerprint . lookup trie
 
-querySet :: (Ord a, Monad m) => Trie a -> TrieLocation -> m (Set a)
+querySet :: (Ord a, MonadFail m) => Trie a -> TrieLocation -> m (Set a)
 querySet trie = liftM getAll . lookup trie
 
 getAll :: (Ord a) => Trie a -> Set a
