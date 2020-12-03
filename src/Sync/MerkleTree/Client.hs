@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE MultiWayIf #-}
 module Sync.MerkleTree.Client where
 
 import Control.Monad
@@ -200,15 +201,13 @@ synchronizeNewOrChangedEntry pg fp entry =
 nodeReq :: (ClientMonad m) => (TrieLocation, Trie Entry) -> m (Diff Entry)
 nodeReq (loc,trie) =
     do fp <- queryHashReq loc
-       case () of
-         () | fp == toFingerprint trie ->
-                return mempty
-            | Node arr <- t_node trie, NodeType == f_nodeType fp ->
-                split $ map nodeReq (expand loc arr)
-            | otherwise ->
-                do s' <- querySetReq loc
-                   let s = getAll trie
-                   return $ Diff (s `S.difference` s') (s' `S.difference` s)
+       if | fp == toFingerprint trie -> return mempty
+          | Node arr <- t_node trie, NodeType == f_nodeType fp ->
+              split $ map nodeReq (expand loc arr)
+          | otherwise ->
+              do s' <- querySetReq loc
+                 let s = getAll trie
+                 return $ Diff (s `S.difference` s') (s' `S.difference` s)
 
 testEntry :: H.Test
 testEntry = H.TestLabel "testEntry" $ H.TestList

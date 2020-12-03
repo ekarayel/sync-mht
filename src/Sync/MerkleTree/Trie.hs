@@ -102,7 +102,7 @@ hashMD5 = hash
 combineHash :: [Hash] -> Hash
 combineHash = Hash . toBytes . hashMD5 . BS.concat . map unHash
 
--- | The function @groupOf x@ eeturns a value between 0 to degree-1 for a digest with the property
+-- | The function @groupOf x@ returns a value between 0 to degree-1 for a digest with the property
 -- that @groupOf@ forms an approximate unviversal hash familiy.
 groupOf :: (HasDigest a) => Int -> a -> Int
 groupOf i x = fromInteger $ toInteger $ (h0 `mod` (fromInteger $ toInteger degree))

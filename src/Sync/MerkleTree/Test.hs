@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiWayIf #-}
 module Sync.MerkleTree.Test where
 
 import Control.Exception
@@ -290,14 +291,13 @@ mkRandomDir md fps =
       names <- distinctNames 6
       forM_ names $ \n ->
           do genDir <- randomIO
-             case () of
-               () | genDir, md > 0 -> mkRandomDir (md - 1) $ map (</> n) fps
-                  | genDir -> return ()
-                  | otherwise ->
-                      do d <- randomRIO (1,4)
-                         forM_ fps $ \fp ->
-                             do writeFile (fp </> n) (show d)
-                                setFileTimes (fp </> n) (utcTimeFrom d) (utcTimeFrom d)
+             if | genDir, md > 0 -> mkRandomDir (md - 1) $ map (</> n) fps
+                | genDir -> return ()
+                | otherwise ->
+                    do d <- randomRIO (1,4)
+                       forM_ fps $ \fp ->
+                           do writeFile (fp </> n) (show d)
+                              setFileTimes (fp </> n) (utcTimeFrom d) (utcTimeFrom d)
 
 doesThrowIOError :: IO () -> IO Bool
 doesThrowIOError a =
@@ -327,23 +327,22 @@ areDirsEqual :: FilePath -> FilePath -> IO ()
 areDirsEqual fp1 fp2 =
    do files1 <- liftM (sort . filter isRealFile) $ getDirectoryContents fp1
       files2 <- liftM (sort . filter isRealFile) $ getDirectoryContents fp2
-      case () of
-        () | files1 == files2 -> forM_ files1 $ \f -> areEntriesEqual (fp1 </> f) (fp2 </> f)
-           | otherwise -> fail $ "Unequal: " ++ show (fp1, fp2, files1, files2)
+      if files1 == files2
+          then forM_ files1 $ \f -> areEntriesEqual (fp1 </> f) (fp2 </> f)
+          else fail $ "Unequal: " ++ show (fp1, fp2, files1, files2)
 
 areEntriesEqual :: FilePath -> FilePath -> IO ()
 areEntriesEqual f1 f2 =
   do s1 <- getFileStatus f1
      s2 <- getFileStatus f2
-     case () of
-        () | isDirectory s1, isDirectory s2 -> areDirsEqual f1 f2
-           | isRegularFile s1, isRegularFile s2 ->
-               do c1 <- readFile f1
-                  c2 <- readFile f2
-                  unless (c1 == c2) $ fail $ "Unequal files: " ++ show (f1, f2, c1, c2)
-           | otherwise ->
-               fail $ show
-                   (f1, f2, isDirectory s1, isDirectory s2, isRegularFile s1, isRegularFile s2)
+     if | isDirectory s1, isDirectory s2 -> areDirsEqual f1 f2
+        | isRegularFile s1, isRegularFile s2 ->
+            do c1 <- readFile f1
+               c2 <- readFile f2
+               unless (c1 == c2) $ fail $ "Unequal files: " ++ show (f1, f2, c1, c2)
+        | otherwise ->
+            fail $ show
+                (f1, f2, isDirectory s1, isDirectory s2, isRegularFile s1, isRegularFile s2)
 
 -- | @distinctNames k@ creates k distinct file names
 distinctNames :: Integer -> IO [String]

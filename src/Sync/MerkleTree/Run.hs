@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE MultiWayIf #-}
 module Sync.MerkleTree.Run where
 
 import Control.Concurrent
@@ -131,14 +132,13 @@ main :: String -> [String] -> IO ()
 main version args = flip catchIOError (putError . show) $
     do let parsedOpts = getOpt (ReturnInOrder parseNonOption) optDescriptions args
            exit err = hPutStrLn stderr err >> exitFailure
-       case () of
-         () | [] == args -> runChild
-            | (options,[],[]) <- parsedOpts ->
-                do mMsg <- run version $ toSyncOptions options
-                   case mMsg of
-                     Just err -> exit $ T.unpack err
-                     Nothing -> return ()
-            | (_,_,errs) <- parsedOpts -> exit $ concat $ map (++"\n") errs
+       if | [] == args -> runChild
+          | (options,[],[]) <- parsedOpts ->
+              do mMsg <- run version $ toSyncOptions options
+                 case mMsg of
+                   Just err -> exit $ T.unpack err
+                   Nothing -> return ()
+          | (_,_,errs) <- parsedOpts -> exit $ concat $ map (++"\n") errs
 
 run :: String -> SyncOptions -> IO (Maybe T.Text)
 run version so

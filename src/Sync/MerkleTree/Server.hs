@@ -62,10 +62,10 @@ instance Protocol ServerMonad where
 withHandle :: Handle -> Int -> ServerMonad QueryFileResponse
 withHandle h n =
     do bs <- liftIO $ BS.hGet h (2^(17::Int))
-       case () of
-         () | BS.null bs ->
+       if BS.null bs
+           then
              do liftIO $ hClose h
                 modify (\s -> s { st_handles = M.delete n (st_handles s) })
                 return $ Final
-            | otherwise ->
-                return $ ToBeContinued (BL.toStrict $ compress $ BL.fromStrict bs) $ ContHandle n
+           else
+             return $ ToBeContinued (BL.toStrict $ compress $ BL.fromStrict bs) $ ContHandle n
