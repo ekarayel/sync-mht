@@ -49,7 +49,7 @@ testIgnoreBoring =
                writeFile (srcDir </> "a" </> "bar") "testE"
                writeFile (srcDir </> "some-foo.txt") "testF"
                writeFile (srcDir </> "a" </> "foo") "testG"
-               runSync $
+               run $
                    defaultSyncOptions
                    { so_source = Just $ srcDir
                    , so_destination = Just $ destDir
@@ -84,7 +84,7 @@ testBigFile = H.TestLabel "testBigFile" $ H.TestCase $
                   forM_ [1..20] $ \j ->
                       writeFile (srcDir </> (show i) </> ("new.txt"++show j)) data_
            createDirectory destDir
-           runSync $
+           run $
                defaultSyncOptions
                { so_source = Just $ srcDir
                , so_destination = Just $ destDir
@@ -108,7 +108,7 @@ testCmdLine = H.TestLabel "testCmdLine" $ H.TestCase $
            createDirectory destDir
            writeFile boringFile "$bar^"
            writeFile (srcDir </> "new.txt") expected
-           runMain ["-s",srcDir,"-d",destDir,"-a","-u","--delete","-i","$foo^","-b",boringFile]
+           main ["-s",srcDir,"-d",destDir,"-a","-u","--delete","-i","$foo^","-b",boringFile]
            got <- readFile  $ destDir </> "new.txt"
            expected H.@=? got
 
@@ -121,11 +121,11 @@ testCmdLineFail = H.TestLabel "testCmdLineFail" $ H.TestCase $
            createDirectory srcDir
            createDirectory destDir
            writeFile (srcDir </> "new.txt") expected
-           shouldFail $ runMain ["-s",srcDir,"-d",destDir,"foo","bar"]
-           runMain ["-s",srcDir,"-d","remote:"++destDir,"-r","exit 0"]
-           shouldFail $ runMain ["-foobar"]
-           runMain ["--help"]
-           runMain ["-s",srcDir,"-d",destDir]
+           shouldFail $ main ["-s",srcDir,"-d",destDir,"foo","bar"]
+           main ["-s",srcDir,"-d","remote:"++destDir,"-r","exit 0"]
+           shouldFail $ main ["-foobar"]
+           main ["--help"]
+           main ["-s",srcDir,"-d",destDir]
            (doesFileExist $ destDir </> "new.txt") >>= (False H.@=?)
 
 testClockDriftFail :: H.Test
@@ -144,18 +144,12 @@ testClockDriftFail = H.TestLabel "testClockDriftFail" $ H.TestCase $
            createDirectory srcDir
            createDirectory destDir
            writeFile (srcDir </> "new.txt") expected
-           Just _ <- runSync $ syncOpts { so_compareClocks = Just (10.0, -100.0) }
-           Just _ <- runSync $ syncOpts { so_compareClocks = Just (10.0, 100.0) }
+           Just _ <- run $ syncOpts { so_compareClocks = Just (10.0, -100.0) }
+           Just _ <- run $ syncOpts { so_compareClocks = Just (10.0, 100.0) }
            (doesFileExist $ destDir </> "new.txt") >>= (False H.@=?)
-           Nothing <- runSync $ syncOpts { so_compareClocks = Just (10.0, 0.0) }
+           Nothing <- run $ syncOpts { so_compareClocks = Just (10.0, 0.0) }
            got <- readFile  $ destDir </> "new.txt"
            expected H.@=? got
-
-runMain :: [String] -> IO ()
-runMain = main ""
-
-runSync :: SyncOptions -> IO (Maybe T.Text)
-runSync = run ""
 
 testHelp :: H.Test
 testHelp = H.TestLabel "testHelp" $ H.TestCase $
@@ -172,22 +166,22 @@ testHelp = H.TestLabel "testHelp" $ H.TestCase $
            createDirectory srcDir
            createDirectory destDir
            writeFile (srcDir </> "new.txt") data_
-           Just _ <- runSync $ syncOpts { so_nonOptions = ["foo", "bar"] }
-           Just _ <- runSync $ syncOpts { so_source = Just $ "remote:" ++ srcDir }
-           Just _ <- runSync $ syncOpts { so_destination = Just $ "remote:" ++ destDir }
-           Just _ <- runSync $ syncOpts { so_source = Nothing }
-           Just _ <- runSync $ syncOpts { so_destination = Nothing }
-           Just _ <- runSync $ syncOpts { so_source = Nothing, so_destination = Nothing }
-           Just _ <- runSync defaultSyncOptions
-           Just _ <- runSync $ syncOpts { so_remote = Just $ RemoteCmd "/bin/true" }
+           Just _ <- run $ syncOpts { so_nonOptions = ["foo", "bar"] }
+           Just _ <- run $ syncOpts { so_source = Just $ "remote:" ++ srcDir }
+           Just _ <- run $ syncOpts { so_destination = Just $ "remote:" ++ destDir }
+           Just _ <- run $ syncOpts { so_source = Nothing }
+           Just _ <- run $ syncOpts { so_destination = Nothing }
+           Just _ <- run $ syncOpts { so_source = Nothing, so_destination = Nothing }
+           Just _ <- run defaultSyncOptions
+           Just _ <- run $ syncOpts { so_remote = Just $ RemoteCmd "/bin/true" }
            Just _ <-
-               runSync $ syncOpts
+               run $ syncOpts
                    { so_source = Just $ "remote:" ++ srcDir
                    , so_destination = Just $ "remote:" ++ destDir
                    , so_remote = Just $ RemoteCmd "/bin/true"
                    }
-           Nothing <- runSync $ syncOpts { so_help = True }
-           Nothing <- runSync $ syncOpts { so_version = True }
+           Nothing <- run $ syncOpts { so_help = True }
+           Nothing <- run $ syncOpts { so_version = True }
            (doesFileExist $ destDir </> "new.txt") >>= (False H.@=?)
 
 testExit :: H.Test
@@ -200,7 +194,7 @@ testExit = H.TestLabel "testExit" $ H.TestCase $
            createDirectory destDir
            writeFile (srcDir </> "new.txt") data_
            shouldFail $
-               do runSync $ defaultSyncOptions
+               do run $ defaultSyncOptions
                         { so_source = Just $ "remote:" ++ srcDir
                         , so_destination = Just $ destDir
                         , so_remote = Just $ RemoteCmd "exit"
@@ -222,7 +216,7 @@ testOptions = H.TestLabel "testOptions" $ H.TestCase $
                    writeFile (destDir </> "changed.txt") "testB"
                    writeFile (srcDir </> "added.txt") "test"
                    writeFile (destDir </> "deleted.txt") "testB"
-                   runSync $
+                   run $
                        defaultSyncOptions
                        { so_source = Just $ srcDir
                        , so_destination = Just $ destDir
@@ -264,7 +258,7 @@ testSync =
                    targetPrefix
                        | simulate == 2 = "remote:"
                        | otherwise = ""
-               let cmd = runSync $
+               let cmd = run $
                        defaultSyncOptions
                        { so_source = Just $ (sourcePrefix ++) testDir </> "src"
                        , so_destination = Just $ (targetPrefix ++) testDir </> "target"

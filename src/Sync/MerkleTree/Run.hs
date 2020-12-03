@@ -7,6 +7,7 @@ import Control.Concurrent
 import Control.Concurrent.MVar()
 import Control.Monad
 import Data.List
+import Data.Version (showVersion)
 import System.Console.GetOpt
 import System.Exit
 import System.IO
@@ -16,6 +17,7 @@ import Sync.MerkleTree.CommTypes
 import Sync.MerkleTree.Sync
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
+import qualified Paths_sync_mht as P
 
 data RemoteCmd
     = RemoteCmd String
@@ -103,8 +105,8 @@ toSyncOptions = foldl (flip id) defaultSyncOptions
 putError :: String -> IO ()
 putError = hPutStrLn stderr
 
-printUsageInfo :: String -> IO ()
-printUsageInfo version =
+printUsageInfo :: IO ()
+printUsageInfo =
     mapM_ putError ([usageInfo header optDescriptions] ++ [details])
     where
       header = unlines
@@ -128,21 +130,24 @@ parseFilePath fp
     | Just rest <- stripPrefix "remote:" fp = Remote rest
     | otherwise = Local fp
 
-main :: String -> [String] -> IO ()
-main version args = flip catchIOError (putError . show) $
+main :: [String] -> IO ()
+main args = flip catchIOError (putError . show) $
     do let parsedOpts = getOpt (ReturnInOrder parseNonOption) optDescriptions args
            exit err = hPutStrLn stderr err >> exitFailure
-       if | [] == args -> runChild
+       if | null args -> runChild
           | (options,[],[]) <- parsedOpts ->
-              do mMsg <- run version $ toSyncOptions options
+              do mMsg <- run $ toSyncOptions options
                  case mMsg of
                    Just err -> exit $ T.unpack err
                    Nothing -> return ()
           | (_,_,errs) <- parsedOpts -> exit $ concat $ map (++"\n") errs
 
-run :: String -> SyncOptions -> IO (Maybe T.Text)
-run version so
-    | so_help so = usage >> return Nothing
+version :: String
+version = showVersion P.version
+
+run :: SyncOptions -> IO (Maybe T.Text)
+run so
+    | so_help so = printUsageInfo >> return Nothing
     | so_version so = putStrLn version >> return Nothing
     | not (null (so_nonOptions so)) =
         return $ Just $ T.concat
@@ -170,7 +175,6 @@ run version so
                 [(so_source, "--source"), (so_destination, "--destination")]
            return $ Just $ T.concat [ "The options ", missingOpts, " are required." ]
     where
-      usage = printUsageInfo version
       doubleRemote = "Either the directory given in --source or --destination must be local."
       missingRemote = T.concat
           [ "The --remote-shell options requires that either the directory given at "

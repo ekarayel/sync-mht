@@ -37,10 +37,11 @@ analyse fp ignore = analyseSubDirectory fp (map mkRegex ignore) Root
 analyseSubDirectory :: FilePath -> [Regex] -> Path -> IO [Entry]
 analyseSubDirectory fp ignore path =
     do files <- getDirectoryContents fp
-       liftM concat $ mapM (analyseEntry fp ignore path) $ filter isRealFile files
+       liftM concat $ mapM (analyseEntry fp ignore path) files
 
 analyseEntry :: FilePath -> [Regex] -> Path -> String -> IO [Entry]
 analyseEntry fp ignore path name
+    | not (isRealFile name) = return []
     | shouldIgnore path' ignore = return []
     | otherwise =
           lstat fp' >>= maybe (return []) analyse'
