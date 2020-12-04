@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -17,8 +18,8 @@ module Sync.MerkleTree.Sync
 import Control.Concurrent(newChan)
 import Control.Concurrent.MVar
 import Control.Monad
+import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask)
 import Control.Monad.State
-import Data.Monoid
 import System.FilePath
 import Prelude hiding (lookup)
 import Sync.MerkleTree.Trie hiding (tests)
@@ -40,7 +41,7 @@ import Sync.MerkleTree.Analyse
 import Sync.MerkleTree.CommTypes
 import Sync.MerkleTree.Client
 import Sync.MerkleTree.Server
-import Sync.MerkleTree.Util.RequestMonad
+import Sync.MerkleTree.Channel
 import Sync.MerkleTree.Util.GetFromInputStream
 
 data StreamPair
@@ -60,7 +61,11 @@ mkChanStreams =
     do chan <- newChan
        liftM2 (,) (ST.chanToInput chan) (ST.chanToOutput chan)
 
-instance Protocol RequestMonad where
+request :: 
+    (MonadReader Channel m, MonadIO m, SE.Serial a, SE.Serial b) => a -> m b
+request x = ask >>= (\channel -> liftIO $ makeRequest channel x)
+
+instance Protocol (ReaderT Channel IO) where
     queryHashReq = request . QueryHash
     querySetReq = request . QuerySet
     queryFileReq = request . QueryFile
@@ -68,12 +73,6 @@ instance Protocol RequestMonad where
     logReq = request . Log
     queryTime = request QueryTime
     terminateReq = request . Terminate
-
-instance ClientMonad RequestMonad where
-    split = splitRequests
-
-instance ClientMonad ServerMonad where
-    split xs = liftM mconcat $ sequence xs
 
 data Direction
     = FromRemote
@@ -148,7 +147,8 @@ server entries fp streams = (startServerState fp $ mkTrie 0 entries) >>= evalSta
 
 client :: ClientServerOptions -> [Entry] -> FilePath -> StreamPair -> IO (Maybe T.Text)
 client cs entries fp streams =
-    runRequestMonad (sp_in streams) (sp_out streams) $ abstractClient cs fp $ mkTrie 0 entries
+    do channel <- buildChannel (sp_in streams) (sp_out streams) 
+       runReaderT (abstractClient cs fp $ mkTrie 0 entries) channel
 
 tests :: H.Test
 tests = H.TestList $

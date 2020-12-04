@@ -1,4 +1,3 @@
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -6,6 +5,7 @@
 module Sync.MerkleTree.Server where
 
 import Codec.Compression.GZip
+import Control.Monad.Parallel (MonadParallel, bindM2)
 import Control.Monad.State
 import Sync.MerkleTree.CommTypes
 import Sync.MerkleTree.Trie
@@ -57,6 +57,12 @@ instance Protocol ServerMonad where
            withHandle h n
     queryTime = liftIO getCurrentTime
     terminateReq _ = return True
+
+instance MonadParallel ServerMonad where
+    bindM2 r a b =
+        do a' <- a
+           b' <- b
+           r a' b'
 
 -- | Respond to a queryFile or queryFileCont request for a given file handle and id
 withHandle :: Handle -> Int -> ServerMonad QueryFileResponse
