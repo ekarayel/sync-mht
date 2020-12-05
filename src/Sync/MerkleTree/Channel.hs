@@ -22,11 +22,12 @@ import Control.Concurrent.STM
 import Data.ByteString(ByteString)
 import Data.IORef(IORef,newIORef,modifyIORef,readIORef)
 import System.IO.Streams(InputStream, OutputStream)
-import Sync.MerkleTree.Util.GetFromInputStream
 import qualified Data.Bytes.Serial as SE
 import qualified Data.Bytes.Put as P
 import qualified System.IO.Streams as ST
 import qualified Control.Concurrent.Lock as L
+
+import Sync.MerkleTree.Util.GetFromInputStream
 
 data Channel =
     Channel

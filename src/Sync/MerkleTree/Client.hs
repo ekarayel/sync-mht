@@ -17,9 +17,6 @@ import Data.List
 import Data.Ratio
 import Data.IORef
 import Foreign.C.Types
-import Sync.MerkleTree.CommTypes
-import Sync.MerkleTree.Trie
-import Sync.MerkleTree.Types
 import System.Directory
 import System.IO
 import System.PosixCompat.Files
@@ -30,7 +27,10 @@ import qualified Data.Foldable as F
 import qualified Data.Set as S
 import qualified Data.Map as M
 import qualified Data.Text as T
-import qualified Test.HUnit as H
+
+import Sync.MerkleTree.CommTypes
+import Sync.MerkleTree.Trie
+import Sync.MerkleTree.Types
 
 data Diff a = Diff (Set a) (Set a)
 
@@ -213,10 +213,3 @@ nodeReq (loc,trie) =
                  let s = getAll trie
                  return $ Diff (s `S.difference` s') (s' `S.difference` s)
 
-testEntry :: H.Test
-testEntry = H.TestLabel "testEntry" $ H.TestList
-    [ False H.~=? (FileSimpleEntry p /= FileSimpleEntry p)
-    , False H.~=? (DirectorySimpleEntry p  == FileSimpleEntry p)
-    ]
-    where
-      p = Path "t" Root

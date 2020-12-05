@@ -12,7 +12,6 @@ module Sync.MerkleTree.Sync
     , mkChanStreams
     , StreamPair(..)
     , Direction(..)
-    , tests
     ) where
 
 import Control.Concurrent(newChan)
@@ -22,12 +21,8 @@ import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask)
 import Control.Monad.State
 import System.FilePath
 import Prelude hiding (lookup)
-import Sync.MerkleTree.Trie hiding (tests)
-import Sync.MerkleTree.Types
 import System.IO
-import System.IO.Error
-import System.IO.Temp
-import System.IO.Streams(InputStream, OutputStream, connect)
+import System.IO.Streams(InputStream, OutputStream)
 import Data.ByteString(ByteString)
 import qualified Data.Bytes.Serial as SE
 import qualified Data.Bytes.Put as P
@@ -35,13 +30,14 @@ import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import qualified System.IO.Streams as ST
 import qualified System.IO.Streams.Concurrent as ST
-import qualified Test.HUnit as H
 
 import Sync.MerkleTree.Analyse
-import Sync.MerkleTree.CommTypes
-import Sync.MerkleTree.Client
-import Sync.MerkleTree.Server
 import Sync.MerkleTree.Channel
+import Sync.MerkleTree.Client
+import Sync.MerkleTree.CommTypes
+import Sync.MerkleTree.Server
+import Sync.MerkleTree.Trie
+import Sync.MerkleTree.Types
 import Sync.MerkleTree.Util.GetFromInputStream
 
 data StreamPair
@@ -149,42 +145,3 @@ client :: ClientServerOptions -> [Entry] -> FilePath -> StreamPair -> IO (Maybe 
 client cs entries fp streams =
     do channel <- buildChannel (sp_in streams) (sp_out streams) 
        runReaderT (abstractClient cs fp $ mkTrie 0 entries) channel
-
-tests :: H.Test
-tests = H.TestList $
-    [ H.TestLabel "testOpenStreams" $ H.TestCase $
-         withSystemTempDirectory "testStreams" $ \dir ->
-             do let testStr = "31456"
-                writeFile (dir </> "read.in") testStr
-                hIn <- openFile (dir </> "read.in") ReadMode
-                hOut <- openFile (dir </> "write.out") WriteMode
-                st <- openStreams hIn hOut
-                connect (sp_in st) (sp_out st)
-                hClose hIn
-                hClose hOut
-                got <- readFile $ dir </> "write.out"
-                testStr H.@=? got
-    , H.TestLabel "testProtocolVersion" $ H.TestCase $
-          withSystemTempDirectory "testProtocolVersion" $ \dir ->
-              do r <- flip catchIOError (\_ -> return True) $
-                     do inst <-
-                            ST.fromByteString $ P.runPutS $ SE.serialize $ show $
-                            LaunchMessage
-                            { lm_protocolVersion = ProtocolVersion 1
-                            , lm_dir = dir
-                            , lm_side = Client
-                            , lm_clientServerOptions =
-                                ClientServerOptions
-                                { cs_add = False
-                                , cs_update = False
-                                , cs_delete = False
-                                , cs_ignore = []
-                                , cs_compareClocks = Nothing
-                                }
-                            }
-                        out <- ST.nullOutput
-                        r <- newEmptyMVar
-                        child r $ StreamPair { sp_in = inst, sp_out = out }
-                        return False
-                 True H.@=? r
-    ]

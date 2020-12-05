@@ -4,19 +4,20 @@ module Sync.MerkleTree.Analyse
     , isRealFile
     ) where
 
+import Control.Exception (try)
 import Control.Monad
 import Data.Maybe
-import System.FilePath
 import Foreign.C.Types
 import Prelude hiding (lookup)
-import System.IO (hPutStrLn, stderr)
-import Control.Exception (try)
-import Sync.MerkleTree.Types
 import System.Directory
+import System.FilePath
+import System.IO (hPutStrLn, stderr)
 import System.PosixCompat.Files
 import System.Posix.Types
 import Text.Regex (matchRegex, mkRegex, Regex)
 import qualified Data.Text as T
+
+import Sync.MerkleTree.Types
 
 -- | Returns True if the given string is not "." or ".."
 isRealFile :: String -> Bool

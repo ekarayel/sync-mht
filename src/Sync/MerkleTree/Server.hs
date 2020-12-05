@@ -7,17 +7,18 @@ module Sync.MerkleTree.Server where
 import Codec.Compression.GZip
 import Control.Monad.Parallel (MonadParallel, bindM2)
 import Control.Monad.State
-import Sync.MerkleTree.CommTypes
-import Sync.MerkleTree.Trie
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
-import Sync.MerkleTree.Types
-import qualified Data.Map as M
-import Data.Map(Map)
+import Data.Map (Map)
+import Data.Time.Clock
+import System.IO
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
-import System.IO
-import Data.Time.Clock
+import qualified Data.Map as M
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
+
+import Sync.MerkleTree.CommTypes
+import Sync.MerkleTree.Trie
+import Sync.MerkleTree.Types
 
 data ServerState
     = ServerState

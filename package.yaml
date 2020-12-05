@@ -38,15 +38,20 @@ dependencies:
   - random >= 1.0
   - HUnit >= 1.2
   - temporary >= 1.2
- 
-executable:
-  main: Main.hs
-  dependencies:
-    - sync-mht
-
-tests:
-  spec:
-    main: Test.hs
+  
+executables:
+  sync-mht:
+    main: Main.hs
     dependencies:
       - sync-mht
+    source-dirs: driver
 
+tests:
+  unit:
+    main: Spec.hs
+    verbatim:
+      build-tool-depends: sync-mht:sync-mht
+    dependencies:
+      - sync-mht
+      - hspec == 2.*
+    source-dirs: test

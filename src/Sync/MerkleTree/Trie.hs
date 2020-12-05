@@ -16,7 +16,6 @@ import qualified Data.Bytes.Serial as SE
 import qualified Data.Set as S
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import qualified Test.HUnit as H
 
 data Hash = Hash { unHash :: !BS.ByteString }
     deriving (Eq, Generic)
@@ -47,10 +46,10 @@ instance SE.Serial NodeType
 -- Location in the Merkle Hash Trie
 data TrieLocation
     = TrieLocation
-    { tl_level :: !Int -- ^ Must be nonnegative
-    , tl_index :: !Int -- ^ Must be between nonnegative and smaller than (degree^tl_level)
-    }
-    deriving (Generic)
+      { tl_level :: !Int -- ^ Must be nonnegative
+      , tl_index :: !Int -- ^ Must be between nonnegative and smaller than (degree^tl_level)
+      }
+      deriving (Generic)
 
 instance SE.Serial TrieLocation
 
@@ -154,19 +153,3 @@ expand loc arr = map go [0..(degree - 1)]
             , tl_index = degree * tl_index loc + i }
           , arr ! i
           )
-
-newtype TestDigest = TestDigest { unTestDigest :: T.Text }
-    deriving (Eq, Ord, Show)
-
-instance HasDigest TestDigest where
-    digest = hashMD5 . TE.encodeUtf8 . unTestDigest
-
-tests :: H.Test
-tests = H.TestList $
-    [ H.TestLabel "trieLookup"
-        $ (Nothing H.~=? (lookup t (TrieLocation { tl_level = -1, tl_index = 0 })))
-    , H.TestLabel "trieLookupTooDeep"
-        $ (Nothing H.~=? (lookup t (TrieLocation { tl_level = 4, tl_index = 0 })))
-    ]
-    where
-      t = mkTrie 0 $ map (TestDigest . T.pack . show) [0..(13+2*degree*degree)]

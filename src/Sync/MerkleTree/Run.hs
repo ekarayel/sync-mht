@@ -13,21 +13,18 @@ import System.Exit
 import System.IO
 import System.IO.Error
 import System.Process
-import Sync.MerkleTree.CommTypes
-import Sync.MerkleTree.Sync
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Paths_sync_mht as P
 
-data RemoteCmd
-    = RemoteCmd String
-    | Simulate
+import Sync.MerkleTree.CommTypes
+import Sync.MerkleTree.Sync
 
 data SyncOptions
     = SyncOptions
       { so_source :: Maybe FilePath
       , so_destination :: Maybe FilePath
-      , so_remote :: Maybe RemoteCmd
+      , so_remote :: Maybe String
       , so_ignore :: [String]
       , so_boring :: [FilePath]
       , so_add :: Bool
@@ -77,7 +74,7 @@ optDescriptions =
         "source directory"
     , Option ['d'] ["destination"] (ReqArg (\fp so -> so { so_destination = Just fp }) "DIR")
         "destination directory"
-    , Option ['r'] ["remote-shell"] (ReqArg (\s so -> so { so_remote = Just $ RemoteCmd s }) "CMD")
+    , Option ['r'] ["remote-shell"] (ReqArg (\s so -> so { so_remote = Just s }) "CMD")
         "synchroize with a remote-site (see below)"
     , Option ['i'] ["ignore"] (ReqArg (\fp so -> so { so_ignore = fp:(so_ignore so) }) "REGEX")
         "ignore entries matching the given regex"
@@ -131,7 +128,7 @@ parseFilePath fp
     | otherwise = Local fp
 
 main :: [String] -> IO ()
-main args = flip catchIOError (putError . show) $
+main args = flip catchIOError (die . show) $
     do let parsedOpts = getOpt (ReturnInOrder parseNonOption) optDescriptions args
        if | null args -> runChild
           | (options,[],[]) <- parsedOpts ->
@@ -197,36 +194,20 @@ runChild =
 
 runParent ::
     ClientServerOptions
-    -> RemoteCmd
+    -> String
     -> FilePath
     -> FilePath
     -> Direction
     -> IO (Maybe T.Text)
-runParent clientServerOpts mRemoteCmd source destination dir =
-    do (exitAction, parentStreams) <-
-           case mRemoteCmd of
-             RemoteCmd remoteCmd ->
-                 do (Just hIn, Just hOut, Nothing, ph) <-
-                        createProcess $ (shell remoteCmd)
-                        { std_in = CreatePipe
-                        , std_out = CreatePipe
-                        }
-                    parentStreams <- openStreams hOut hIn
-                    let shutdown =
-                            do hClose hIn
-                               hClose hOut
-                               _ <- waitForProcess ph
-                               return ()
-                    return (shutdown, parentStreams)
-             Simulate ->
-                 do (parentInStream, childOutStream) <- mkChanStreams
-                    (childInStream, parentOutStream) <- mkChanStreams
-                    childTerminated <- newEmptyMVar
-                    running <- newEmptyMVar
-                    let childStrs = StreamPair { sp_in = childInStream, sp_out = childOutStream }
-                    let parentStrs = StreamPair { sp_in = parentInStream, sp_out = parentOutStream }
-                    _ <- forkFinally (child running childStrs) (const $ putMVar childTerminated ())
-                    return (takeMVar childTerminated, parentStrs)
+runParent clientServerOpts remoteCmd source destination dir =
+    do (Just hIn, Just hOut, Nothing, ph) <-
+            createProcess $ (shell remoteCmd)
+            { std_in = CreatePipe
+            , std_out = CreatePipe
+            }
+       parentStreams <- openStreams hOut hIn
        exitMsg <- parent parentStreams source destination dir clientServerOpts
-       exitAction
+       hClose hIn
+       hClose hOut
+       _ <- waitForProcess ph
        return exitMsg

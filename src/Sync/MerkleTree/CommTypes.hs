@@ -5,10 +5,10 @@ module Sync.MerkleTree.CommTypes where
 
 import GHC.Generics
 import Data.Set(Set)
-import qualified Data.Text as T
 import Data.Bytes.Serial
 import Data.Time.Clock
 import Data.ByteString(ByteString)
+import qualified Data.Text as T
 
 import Sync.MerkleTree.Types
 import Sync.MerkleTree.Trie
