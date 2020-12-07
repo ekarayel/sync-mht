@@ -12,6 +12,7 @@ newtype TestDigest = TestDigest { unTestDigest :: T.Text }
 instance T.HasDigest TestDigest where
     digest = T.hashMD5 . TE.encodeUtf8 . unTestDigest
 
+testTrie :: T.Trie TestDigest
 testTrie = T.mkTrie 0 $ map (TestDigest . T.pack . show) [0..168]
 
 spec :: Spec

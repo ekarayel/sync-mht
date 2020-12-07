@@ -6,17 +6,9 @@ import Test.Hspec
 import qualified Data.Bytes.Serial as SE
 import qualified Data.Bytes.Put as P
 import qualified System.IO.Streams as ST
-import qualified System.IO.Streams.Concurrent as ST
 
 import Sync.MerkleTree.Sync
-import Sync.MerkleTree.Analyse
-import Sync.MerkleTree.Channel
-import Sync.MerkleTree.Client
 import Sync.MerkleTree.CommTypes
-import Sync.MerkleTree.Server
-import Sync.MerkleTree.Trie
-import Sync.MerkleTree.Types
-import Sync.MerkleTree.Util.GetFromInputStream
 
 spec :: Spec
 spec = do

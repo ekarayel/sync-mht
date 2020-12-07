@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ImplicitParams #-}
 module Sync.MerkleTree.CommTypes where
 
 import GHC.Generics
@@ -27,6 +28,7 @@ data ContHandle = ContHandle Int
 
 instance Serial ContHandle
 
+-- | Configuration shared by both the client and server.
 data ClientServerOptions
     = ClientServerOptions
       { cs_add :: Bool
@@ -36,6 +38,21 @@ data ClientServerOptions
       , cs_compareClocks :: Maybe (Double, Double)
       }
       deriving (Read, Show)
+
+shouldAdd :: (?clientServerOptions :: ClientServerOptions) => Bool
+shouldAdd = cs_add ?clientServerOptions
+
+shouldUpdate :: (?clientServerOptions :: ClientServerOptions) => Bool
+shouldUpdate = cs_update ?clientServerOptions
+
+shouldDelete :: (?clientServerOptions :: ClientServerOptions) => Bool
+shouldDelete = cs_delete ?clientServerOptions
+
+ignorePaths :: (?clientServerOptions :: ClientServerOptions) => [FilePath]
+ignorePaths = cs_ignore ?clientServerOptions
+
+compareClocks :: (?clientServerOptions :: ClientServerOptions) => Maybe (Double, Double)
+compareClocks = cs_compareClocks ?clientServerOptions
 
 data Request
     = QuerySet TrieLocation

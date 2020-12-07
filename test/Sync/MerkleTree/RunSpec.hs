@@ -5,21 +5,16 @@ module Sync.MerkleTree.RunSpec (spec) where
 
 import Test.Hspec
 
-import Control.Exception
 import Control.Monad
 import Data.List
 import Data.Ix
-import Foreign.C.Types
 import Sync.MerkleTree.Analyse
-import Sync.MerkleTree.Client
 import Sync.MerkleTree.Run hiding (Local)
 import System.Directory
-import System.Exit
 import System.FilePath
 import System.Process
 import System.IO.Temp
 import System.PosixCompat.Files
-import qualified Data.Text as T
 
 spec :: Spec
 spec = 

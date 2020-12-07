@@ -1,6 +1,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE RankNTypes #-}
 module Sync.MerkleTree.Run where
 
 import Control.Concurrent
@@ -53,20 +55,21 @@ defaultSyncOptions =
     , so_compareClocks = Nothing
     }
 
-toClientServerOptions :: SyncOptions -> IO ClientServerOptions
-toClientServerOptions so =
+withClientServerOptions :: SyncOptions -> ((?clientServerOptions :: ClientServerOptions) => IO a) -> IO a
+withClientServerOptions so action =
      do let parseBoringFile = map T.unpack . filter noComment . map T.strip . T.lines
             noComment s = not (T.null s || ("#" `T.isPrefixOf` s))
         ignoreFromBoringFiles <-
             forM (so_boring so) $ liftM parseBoringFile . T.readFile
-        return $
-            ClientServerOptions
-            { cs_add = so_add so
-            , cs_update = so_update so
-            , cs_delete = so_delete so
-            , cs_ignore = (concat ignoreFromBoringFiles) ++ (so_ignore so)
-            , cs_compareClocks = so_compareClocks so
-            }
+        let ?clientServerOptions =
+                ClientServerOptions
+                { cs_add = so_add so
+                , cs_update = so_update so
+                , cs_delete = so_delete so
+                , cs_ignore = (concat ignoreFromBoringFiles) ++ (so_ignore so)
+                , cs_compareClocks = so_compareClocks so
+                }
+        action
 
 optDescriptions :: [OptDescr (SyncOptions -> SyncOptions)]
 optDescriptions =
@@ -151,19 +154,19 @@ run so
             , T.intercalate ", " (map T.pack $ so_nonOptions so)
             ]
     | Just source <- so_source so, Just destination <- so_destination so =
-        do cs <- toClientServerOptions so
+        withClientServerOptions so $ do
            case (parseFilePath source, parseFilePath destination) of
              (Remote _, Remote _) -> return $ Just doubleRemote
              (Local source', Local destination')
                  | Just _ <- so_remote so -> return $ Just missingRemote
-                 | otherwise -> local cs source' destination'
+                 | otherwise -> local source' destination'
              (Remote source', Local destination')
                  | Just remoteCmd <- so_remote so ->
-                     runParent cs remoteCmd source' destination' FromRemote
+                     runParent remoteCmd source' destination' FromRemote
                  | otherwise -> return $ Just missingRemoteCmd
              (Local source', Remote destination')
                  | Just remoteCmd <- so_remote so ->
-                     runParent cs remoteCmd source' destination' ToRemote
+                     runParent remoteCmd source' destination' ToRemote
                  | otherwise -> return $ Just missingRemoteCmd
     | otherwise =
         do let missingOpts =
@@ -178,35 +181,39 @@ run so
           ]
       missingRemoteCmd = "The --remote-shell is required when the prefix 'remote:' is used."
 
-_WAIT_FOR_INPUT_ :: Int
-_WAIT_FOR_INPUT_ = 1000 * 1000 * 3
+-- | Number of micro-seconds to wait for communciation from a parent process,
+-- before suspecting that the user may have launched the command without parameters.
+waitForInput :: Int
+waitForInput = 1000 * 1000 * 3
 
+-- | Run as a child process communicating with a parent process.
 runChild :: IO ()
 runChild =
      do gotMessage <- newEmptyMVar
         streams <- openStreams stdin stdout
         _ <- forkIO $
-            do threadDelay _WAIT_FOR_INPUT_
+            do threadDelay waitForInput
                r <- isEmptyMVar gotMessage
                when r $ putError
                    "Running in server mode. (The command `sync-mht --help` prints usage info.)"
         child gotMessage streams
 
+-- | Run as a parent process communicating with a child process.
 runParent ::
-    ClientServerOptions
-    -> String
+    (?clientServerOptions :: ClientServerOptions)
+    => String
     -> FilePath
     -> FilePath
     -> Direction
     -> IO (Maybe T.Text)
-runParent clientServerOpts remoteCmd source destination dir =
+runParent remoteCmd source destination dir =
     do (Just hIn, Just hOut, Nothing, ph) <-
             createProcess $ (shell remoteCmd)
             { std_in = CreatePipe
             , std_out = CreatePipe
             }
        parentStreams <- openStreams hOut hIn
-       exitMsg <- parent parentStreams source destination dir clientServerOpts
+       exitMsg <- parent parentStreams source destination dir
        hClose hIn
        hClose hOut
        _ <- waitForProcess ph

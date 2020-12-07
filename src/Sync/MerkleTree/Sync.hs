@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -82,13 +83,13 @@ child gotMessage streams =
        return ()
 
 parent ::
-    StreamPair
+    (?clientServerOptions :: ClientServerOptions) 
+    => StreamPair
     -> FilePath
     -> FilePath
     -> Direction
-    -> ClientServerOptions
     -> IO (Maybe T.Text)
-parent streams source destination direction clientServerOpts =
+parent streams source destination direction =
     case direction of
       FromRemote ->
         do respond (sp_out streams) $ show $ mkLaunchMessage Server source
@@ -100,7 +101,7 @@ parent streams source destination direction clientServerOpts =
       mkLaunchMessage side dir =
           LaunchMessage
           { lm_dir = dir
-          , lm_clientServerOptions = clientServerOpts
+          , lm_clientServerOptions = ?clientServerOptions
           , lm_protocolVersion = thisProtocolVersion
           , lm_side = side
           }
@@ -108,12 +109,12 @@ parent streams source destination direction clientServerOpts =
 respond :: (SE.Serial a) => OutputStream ByteString -> a -> IO ()
 respond os = mapM_ (flip ST.write os . Just) . (:[BS.empty]) . P.runPutS . SE.serialize
 
-local :: ClientServerOptions -> FilePath -> FilePath -> IO (Maybe T.Text)
-local cs source destination =
-    do sourceDir <- liftM (mkTrie 0) $ analyse source (cs_ignore cs)
-       destinationDir <- liftM (mkTrie 0) $ analyse destination (cs_ignore cs)
+local :: (?clientServerOptions :: ClientServerOptions) => FilePath -> FilePath -> IO (Maybe T.Text)
+local source destination =
+    do sourceDir <- liftM (mkTrie 0) $ analyse source ignorePaths
+       destinationDir <- liftM (mkTrie 0) $ analyse destination ignorePaths
        serverState <- startServerState source sourceDir
-       evalStateT (abstractClient cs destination destinationDir) serverState
+       evalStateT (abstractClient destination destinationDir) serverState
 
 serverOrClient :: LaunchMessage -> StreamPair -> IO (Maybe T.Text)
 serverOrClient lm streams
@@ -121,10 +122,12 @@ serverOrClient lm streams
         let side =
                 case lm_side lm of
                   Server -> server
-                  Client -> client (lm_clientServerOptions lm)
-        in do entries <- analyse (lm_dir lm) (cs_ignore $ lm_clientServerOptions lm)
+                  Client -> client 
+        in do entries <- analyse (lm_dir lm) ignorePaths
               side entries (lm_dir lm) streams
     | otherwise = fail "Incompatible sync-mht versions."
+    where
+        ?clientServerOptions = lm_clientServerOptions lm
 
 server :: [Entry] -> FilePath -> StreamPair -> IO (Maybe T.Text)
 server entries fp streams = (startServerState fp $ mkTrie 0 entries) >>= evalStateT loop
@@ -137,11 +140,11 @@ server entries fp streams = (startServerState fp $ mkTrie 0 entries) >>= evalSta
                 QuerySet l -> querySetReq l >>= serverRespond >> loop
                 QueryFile f -> queryFileReq f >>= serverRespond >> loop
                 QueryFileCont c -> queryFileContReq c >>= serverRespond >> loop
-                Log t -> logReq t >>= serverRespond >> loop
+                Log t -> logReq t >> serverRespond True >> loop
                 QueryTime -> queryTime >>= serverRespond >> loop
-                Terminate mMsg -> (terminateReq mMsg >>= serverRespond) >> return mMsg
+                Terminate mMsg -> terminateReq mMsg >> serverRespond True >> return mMsg
 
-client :: ClientServerOptions -> [Entry] -> FilePath -> StreamPair -> IO (Maybe T.Text)
-client cs entries fp streams =
+client :: (?clientServerOptions :: ClientServerOptions) => [Entry] -> FilePath -> StreamPair -> IO (Maybe T.Text)
+client entries fp streams =
     do channel <- buildChannel (sp_in streams) (sp_out streams) 
-       runReaderT (abstractClient cs fp $ mkTrie 0 entries) channel
+       runReaderT (abstractClient fp $ mkTrie 0 entries) channel

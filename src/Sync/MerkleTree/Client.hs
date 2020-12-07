@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE MultiWayIf #-}
 module Sync.MerkleTree.Client where
 
@@ -82,9 +83,9 @@ data Progress
     , pg_last :: IORef UTCTime
     }
 
-checkClockDiff :: (MonadIO m, Protocol m) => ClientServerOptions -> m (Maybe T.Text)
-checkClockDiff opts
-    | Just (realToFrac -> treshold, realToFrac -> skew) <- cs_compareClocks opts =
+checkClockDiff :: (MonadIO m, Protocol m, ?clientServerOptions :: ClientServerOptions) => m (Maybe T.Text)
+checkClockDiff
+    | Just (realToFrac -> treshold, realToFrac -> skew) <- compareClocks =
         do t0 <- liftIO getCurrentTime
            t1 <- liftM (addUTCTime skew) queryTime
            t2 <- liftIO getCurrentTime
@@ -99,26 +100,24 @@ checkClockDiff opts
     | otherwise = return Nothing
 
 abstractClient ::
-    (MonadIO m, Protocol m, MonadParallel m)
-    => ClientServerOptions
-    -> FilePath
+    (MonadIO m, Protocol m, MonadParallel m, ?clientServerOptions :: ClientServerOptions)
+    => FilePath
     -> Trie Entry
     -> m (Maybe T.Text)
-abstractClient cs fp trie =
-    do drift <- checkClockDiff cs
+abstractClient fp trie =
+    do drift <- checkClockDiff
        case drift of
-         Nothing -> syncClient cs fp trie
+         Nothing -> syncClient fp trie
          Just msg ->
              do True <- terminateReq (Just msg)
                 return (Just msg)
 
 syncClient ::
-    (MonadIO m, Protocol m, MonadParallel m)
-    => ClientServerOptions
-    -> FilePath
+    (MonadIO m, Protocol m, MonadParallel m, ?clientServerOptions :: ClientServerOptions)
+    => FilePath
     -> Trie Entry
     -> m (Maybe T.Text)
-syncClient cs fp trie =
+syncClient fp trie =
     do logClient $ T.concat [ "Hash of destination directory: ", showText $ t_hash trie, "\n" ]
        Diff oent nent <- nodeReq (rootLocation, trie)
        let (delEntries, changedEntries, newEntries) = analyseEntries (Diff oent nent)
@@ -128,13 +127,13 @@ syncClient cs fp trie =
            , "size ", dataSizeText changedEntries, " and ", showText $ length newEntries, " "
            , "missing files of size ", dataSizeText newEntries, ".\n"
            ]
-       when (cs_delete cs) $
+       when shouldDelete $
            forM_ (reverse $ sort delEntries) $ \e ->
                case e of
                  FileEntry f -> liftIO $ removeFile $ toFilePath fp $ f_name f
                  DirectoryEntry p -> liftIO $ removeDirectoryRecursive $ toFilePath fp p
        let updateEntries =
-               [ e | cs_add cs, e <- newEntries ] ++ [ e | cs_update cs, e <- changedEntries ]
+               [ e | shouldAdd, e <- newEntries ] ++ [ e | shouldUpdate, e <- changedEntries ]
        progressEntries <- liftIO $ newIORef $ length updateEntries
        progressSize <- liftIO $ newIORef $ dataSize updateEntries
        progressLast <- liftIO $ getCurrentTime >>= newIORef
