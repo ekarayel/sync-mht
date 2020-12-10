@@ -18,7 +18,6 @@ module Sync.MerkleTree.Sync
 import Control.Concurrent(newChan)
 import Control.Concurrent.MVar
 import Control.Monad
-import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask)
 import Control.Monad.State
 import System.FilePath
 import Prelude hiding (lookup)
@@ -33,13 +32,13 @@ import qualified System.IO.Streams as ST
 import qualified System.IO.Streams.Concurrent as ST
 
 import Sync.MerkleTree.Analyse
-import Sync.MerkleTree.Channel
 import Sync.MerkleTree.Client
 import Sync.MerkleTree.CommTypes
 import Sync.MerkleTree.Server
 import Sync.MerkleTree.Trie
 import Sync.MerkleTree.Types
 import Sync.MerkleTree.Util.Communication
+import Sync.MerkleTree.Util.RPCClient
 
 data StreamPair
     = StreamPair
@@ -58,18 +57,14 @@ mkChanStreams =
     do chan <- newChan
        liftM2 (,) (ST.chanToInput chan) (ST.chanToOutput chan)
 
-request :: 
-    (MonadReader Channel m, MonadIO m, SE.Serial a, SE.Serial b) => a -> m b
-request x = ask >>= (\channel -> liftIO $ makeRequest channel x)
-
-instance Protocol (ReaderT Channel IO) where
-    queryHashReq = request . QueryHash
-    querySetReq = request . QuerySet
-    queryFileReq = request . QueryFile
-    queryFileContReq = request . QueryFileCont
-    logReq = request . Log
-    queryTime = request QueryTime
-    terminateReq = request . Terminate
+instance Protocol RPCClient where
+    queryHashReq = call . QueryHash
+    querySetReq = call . QuerySet
+    queryFileReq = call . QueryFile
+    queryFileContReq = call . QueryFileCont
+    logReq = call . Log
+    queryTime = call QueryTime
+    terminateReq = call . Terminate
 
 data Direction
     = FromRemote
@@ -146,5 +141,4 @@ server entries fp streams = (startServerState fp $ mkTrie 0 entries) >>= evalSta
 
 client :: (?clientServerOptions :: ClientServerOptions) => [Entry] -> FilePath -> StreamPair -> IO (Maybe T.Text)
 client entries fp streams =
-    do channel <- buildChannel (sp_in streams) (sp_out streams) 
-       runReaderT (abstractClient fp $ mkTrie 0 entries) channel
+       runRPCClient (sp_in streams) (sp_out streams) (abstractClient fp $ mkTrie 0 entries)

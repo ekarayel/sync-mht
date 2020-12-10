@@ -14,7 +14,7 @@ import qualified Data.Text as T
 import Sync.MerkleTree.Types
 import Sync.MerkleTree.Trie
 
-class MonadFail m => Protocol m where
+class Protocol m where
     queryHashReq :: TrieLocation -> m Fingerprint
     querySetReq :: TrieLocation -> m (Set Entry)
     logReq :: T.Text -> m Bool

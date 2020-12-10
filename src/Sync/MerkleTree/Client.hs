@@ -7,7 +7,6 @@
 module Sync.MerkleTree.Client where
 
 import Control.Monad
-import Control.Monad.Parallel (MonadParallel)
 import Control.Monad.IO.Class
 import Codec.Compression.GZip
 import Data.Function
@@ -21,7 +20,6 @@ import Foreign.C.Types
 import System.Directory
 import System.IO
 import System.PosixCompat.Files
-import qualified Control.Monad.Parallel as P
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Foldable as F
@@ -53,7 +51,7 @@ dataSize s = getSum $ F.foldMap sizeOf s
 dataSizeText :: (F.Foldable f) => f Entry -> T.Text
 dataSizeText s = T.concat [showText $ unFileSize $ dataSize s, " bytes"]
 
-logClient :: (Protocol m) => T.Text -> m ()
+logClient :: (Protocol m, MonadFail m) => T.Text -> m ()
 logClient t =
     do True <- logReq t
        return ()
@@ -100,7 +98,7 @@ checkClockDiff
     | otherwise = return Nothing
 
 abstractClient ::
-    (MonadIO m, Protocol m, MonadParallel m, ?clientServerOptions :: ClientServerOptions)
+    (MonadIO m, Protocol m, MonadFail m, ?clientServerOptions :: ClientServerOptions)
     => FilePath
     -> Trie Entry
     -> m (Maybe T.Text)
@@ -113,7 +111,7 @@ abstractClient fp trie =
                 return (Just msg)
 
 syncClient ::
-    (MonadIO m, Protocol m, MonadParallel m, ?clientServerOptions :: ClientServerOptions)
+    (MonadIO m, Protocol m, MonadFail m, ?clientServerOptions :: ClientServerOptions)
     => FilePath
     -> Trie Entry
     -> m (Maybe T.Text)
@@ -157,12 +155,12 @@ splitEvery n l
     | null l = []
     | (h,t) <- splitAt n l = h:(splitEvery n t)
 
-syncNewOrChangedEntries :: (MonadIO m, Protocol m, MonadParallel m) => Progress -> FilePath -> [Entry] -> m ()
+syncNewOrChangedEntries :: (MonadIO m, MonadFail m, Protocol m) => Progress -> FilePath -> [Entry] -> m ()
 syncNewOrChangedEntries pg fp entries =
     forM_ (splitEvery _CONCURRENT_FILETRANSFER_SIZE_ entries) $ \entryGroup ->
-        P.mapM_ (synchronizeNewOrChangedEntry pg fp) entryGroup
+        F.sequenceA_ $ map (synchronizeNewOrChangedEntry pg fp) entryGroup
 
-showProgess :: (MonadIO m, Protocol m) => Progress -> m ()
+showProgess :: (MonadIO m, MonadFail m, Protocol m) => Progress -> m ()
 showProgess pg =
     do t <- liftIO getCurrentTime
        l <- liftIO $ readIORef (pg_last pg)
@@ -176,7 +174,7 @@ showProgess pg =
               t2 <- liftIO getCurrentTime
               liftIO $ writeIORef (pg_last pg) t2
 
-synchronizeNewOrChangedEntry :: (MonadIO m, Protocol m) => Progress -> FilePath -> Entry -> m ()
+synchronizeNewOrChangedEntry :: (MonadIO m, MonadFail m, Protocol m) => Progress -> FilePath -> Entry -> m ()
 synchronizeNewOrChangedEntry pg fp entry =
     case entry of
       FileEntry f ->
@@ -201,12 +199,12 @@ synchronizeNewOrChangedEntry pg fp entry =
           do liftIO $ modifyIORef (pg_count pg) (subtract 1)
              liftIO $ createDirectory $ toFilePath fp p
 
-nodeReq :: (MonadIO m, Protocol m, MonadParallel m) => (TrieLocation, Trie Entry) -> m (Diff Entry)
+nodeReq :: (MonadIO m, Protocol m, MonadFail m) => (TrieLocation, Trie Entry) -> m (Diff Entry)
 nodeReq (loc,trie) =
     do fp <- queryHashReq loc
        if | fp == toFingerprint trie -> return mempty
           | Node arr <- t_node trie, NodeType == f_nodeType fp ->
-              liftM (foldl1 (<>)) $ P.mapM nodeReq (expand loc arr)
+              fmap (foldl1 (<>)) $ sequenceA $ map nodeReq (expand loc arr)
           | otherwise ->
               do s' <- querySetReq loc
                  let s = getAll trie
