@@ -23,11 +23,9 @@ import Data.ByteString(ByteString)
 import Data.IORef(IORef,newIORef,modifyIORef,readIORef)
 import System.IO.Streams(InputStream, OutputStream)
 import qualified Data.Bytes.Serial as SE
-import qualified Data.Bytes.Put as P
-import qualified System.IO.Streams as ST
 import qualified Control.Concurrent.Lock as L
 
-import Sync.MerkleTree.Util.GetFromInputStream
+import Sync.MerkleTree.Util.Communication
 
 data Channel =
     Channel
@@ -57,12 +55,11 @@ makeRequest channel req =
     do L.acquire $ c_lock channel
        reservedIndex <- readIORef $ c_countIn channel
        modifyIORef (c_countIn channel) (+1)
-       ST.write (Just $ P.runPutS $ SE.serialize req) (c_out channel)
-       ST.write (Just "") (c_out channel) -- flush underlying handle
+       send (c_out channel) req
        L.release (c_lock channel)
        atomically $ 
           do x <- readTVar (c_countOut channel) 
              check (x==reservedIndex) 
-       result <- getFromInputStream (c_in channel)
+       result <- receive (c_in channel)
        atomically $ modifyTVar (c_countOut channel) (+1)
        return result

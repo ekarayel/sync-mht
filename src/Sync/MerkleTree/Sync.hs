@@ -39,7 +39,7 @@ import Sync.MerkleTree.CommTypes
 import Sync.MerkleTree.Server
 import Sync.MerkleTree.Trie
 import Sync.MerkleTree.Types
-import Sync.MerkleTree.Util.GetFromInputStream
+import Sync.MerkleTree.Util.Communication
 
 data StreamPair
     = StreamPair
@@ -77,7 +77,7 @@ data Direction
 
 child :: MVar () -> StreamPair -> IO ()
 child gotMessage streams =
-    do launchMessage <- getFromInputStream (sp_in streams)
+    do launchMessage <- receive (sp_in streams)
        putMVar gotMessage ()
        _ <- serverOrClient (read launchMessage) streams
        return ()
@@ -134,7 +134,7 @@ server entries fp streams = (startServerState fp $ mkTrie 0 entries) >>= evalSta
     where
        serverRespond = liftIO . respond (sp_out streams)
        loop =
-           do req <- liftIO $ getFromInputStream (sp_in streams)
+           do req <- liftIO $ receive (sp_in streams)
               case req of
                 QueryHash l -> queryHashReq l >>= serverRespond >> loop
                 QuerySet l -> querySetReq l >>= serverRespond >> loop
