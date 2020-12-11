@@ -30,6 +30,7 @@ import qualified Data.Text as T
 import Sync.MerkleTree.CommTypes
 import Sync.MerkleTree.Trie
 import Sync.MerkleTree.Types
+import Sync.MerkleTree.Util.Progress
 
 data Diff a = Diff (Set a) (Set a)
 
@@ -74,12 +75,21 @@ analyseEntries (Diff obsoleteEntries newEntries) =
       name (FileEntry f) = FileSimpleEntry $ f_name f
       name (DirectoryEntry f) = DirectorySimpleEntry f
 
-data Progress
-    = Progress
-    { pg_size :: IORef FileSize
-    , pg_count :: IORef Int
-    , pg_last :: IORef UTCTime
+data Cost
+    = Cost
+    { c_fileCount :: Int
+    , c_dataSize :: FileSize
     }
+
+instance Semigroup Cost where
+    (<>) x y = 
+        Cost 
+        { c_fileCount = c_fileCount x + c_fileCount y
+        , c_dataSize = c_dataSize x + c_dataSize y
+        }
+
+instance Monoid Cost where
+    mempty = Cost 0 0
 
 checkClockDiff :: (MonadIO m, Protocol m, ?clientServerOptions :: ClientServerOptions) => m (Maybe T.Text)
 checkClockDiff
@@ -132,53 +142,41 @@ syncClient fp trie =
                  DirectoryEntry p -> liftIO $ removeDirectoryRecursive $ toFilePath fp p
        let updateEntries =
                [ e | shouldAdd, e <- newEntries ] ++ [ e | shouldUpdate, e <- changedEntries ]
-       progressEntries <- liftIO $ newIORef $ length updateEntries
-       progressSize <- liftIO $ newIORef $ dataSize updateEntries
-       progressLast <- liftIO $ getCurrentTime >>= newIORef
-       let progress =
-               Progress
-               { pg_size = progressSize
-               , pg_count = progressEntries
-               , pg_last = progressLast
-               }
-       mapM_ (syncNewOrChangedEntries progress fp)
-           $ groupBy ((==) `on` levelOf) $ sort $ updateEntries
+       progressLast <- liftIO $ getCurrentTime >>= newIORef 
+       runProgress (showProgess progressLast) 
+            $ F.traverse_ (syncNewOrChangedEntries fp)
+            $ groupBy ((==) `on` levelOf) $ sort $ updateEntries
        logClient "Done.                                                                       \n"
        True <- terminateReq Nothing
        return Nothing
 
-_CONCURRENT_FILETRANSFER_SIZE_ :: Int
-_CONCURRENT_FILETRANSFER_SIZE_ = 48
+syncNewOrChangedEntries :: (MonadIO m, MonadFail m, Protocol m, HasProgress Cost m) => FilePath -> [Entry] -> m ()
+syncNewOrChangedEntries fp entries =
+        F.traverse_ (synchronizeNewOrChangedEntry fp) entries
 
-splitEvery :: Int -> [a] -> [[a]]
-splitEvery n l
-    | null l = []
-    | (h,t) <- splitAt n l = h:(splitEvery n t)
-
-syncNewOrChangedEntries :: (MonadIO m, MonadFail m, Protocol m) => Progress -> FilePath -> [Entry] -> m ()
-syncNewOrChangedEntries pg fp entries =
-    forM_ (splitEvery _CONCURRENT_FILETRANSFER_SIZE_ entries) $ \entryGroup ->
-        F.sequenceA_ $ map (synchronizeNewOrChangedEntry pg fp) entryGroup
-
-showProgess :: (MonadIO m, MonadFail m, Protocol m) => Progress -> m ()
-showProgess pg =
+showProgess :: (MonadIO m, MonadFail m, Protocol m) => IORef UTCTime -> ProgressState Cost -> m ()
+showProgess progressLast c =
     do t <- liftIO getCurrentTime
-       l <- liftIO $ readIORef (pg_last pg)
+       l <- liftIO $ readIORef progressLast
        when (diffUTCTime t l > fromRational (1 % 2)) $
-           do leftSize <- liftIO $ readIORef (pg_size pg)
-              leftCount <- liftIO $ readIORef (pg_count pg)
-              logClient $ T.concat
-                  [ "Transfering: ", showText $ unFileSize $ leftSize, " bytes and "
-                  , showText leftCount, " files left.                  \r"
+           do logClient $ T.concat
+                  [ "Transfering: "
+                  , render c_fileCount "files"
+                  , ", "
+                  , render (unFileSize . c_dataSize) "bytes"
+                  , ".       \r"
                   ]
               t2 <- liftIO getCurrentTime
-              liftIO $ writeIORef (pg_last pg) t2
+              liftIO $ writeIORef progressLast t2
+    where
+      render f unit = T.concat [showText $ f (ps_completed c), "/", showText $ f (ps_planned c), " ", unit]
 
-synchronizeNewOrChangedEntry :: (MonadIO m, MonadFail m, Protocol m) => Progress -> FilePath -> Entry -> m ()
-synchronizeNewOrChangedEntry pg fp entry =
+synchronizeNewOrChangedEntry :: (MonadIO m, MonadFail m, Protocol m, HasProgress Cost m) => FilePath -> Entry -> m ()
+synchronizeNewOrChangedEntry fp entry =
     case entry of
       FileEntry f ->
-          do firstResult <- queryFileReq (f_name f)
+          do progressPlanned $ Cost { c_fileCount = 1, c_dataSize = f_size f }
+             firstResult <- queryFileReq (f_name f)
              h <- liftIO $ openFile (toFilePath fp $ f_name f) WriteMode
              let loop result =
                      case result of
@@ -186,17 +184,15 @@ synchronizeNewOrChangedEntry pg fp entry =
                        ToBeContinued content contHandle ->
                            do let bs = BL.toStrict $ decompress $ BL.fromStrict content
                               liftIO $ BS.hPut h $ bs
-                              liftIO $ modifyIORef (pg_size pg)
-                                  (subtract $ fromIntegral $ BS.length bs)
-                              showProgess pg
+                              progressCompleted $ mempty { c_dataSize = fromIntegral $ BS.length bs }
                               queryFileContReq contHandle >>= loop
              loop firstResult
              liftIO $ hClose h
-             liftIO $ modifyIORef (pg_count pg) (subtract 1)
              let modTime = (CTime $ fromIntegral $ unModTime $ f_modtime f)
              liftIO $ setFileTimes (toFilePath fp $ f_name f) modTime modTime
+             progressCompleted $ mempty { c_fileCount = 1 }
       DirectoryEntry p ->
-          do liftIO $ modifyIORef (pg_count pg) (subtract 1)
+          do progress $ mempty { c_fileCount = 1 }
              liftIO $ createDirectory $ toFilePath fp p
 
 nodeReq :: (MonadIO m, Protocol m, MonadFail m) => (TrieLocation, Trie Entry) -> m (Diff Entry)
@@ -204,7 +200,7 @@ nodeReq (loc,trie) =
     do fp <- queryHashReq loc
        if | fp == toFingerprint trie -> return mempty
           | Node arr <- t_node trie, NodeType == f_nodeType fp ->
-              fmap (foldl1 (<>)) $ sequenceA $ map nodeReq (expand loc arr)
+              fmap (foldl1 (<>)) $ traverse nodeReq (expand loc arr)
           | otherwise ->
               do s' <- querySetReq loc
                  let s = getAll trie

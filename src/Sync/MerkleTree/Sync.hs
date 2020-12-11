@@ -10,12 +10,10 @@ module Sync.MerkleTree.Sync
     , local
     , parent
     , openStreams
-    , mkChanStreams
     , StreamPair(..)
     , Direction(..)
     ) where
 
-import Control.Concurrent(newChan)
 import Control.Concurrent.MVar
 import Control.Monad
 import Control.Monad.State
@@ -29,7 +27,6 @@ import qualified Data.Bytes.Put as P
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import qualified System.IO.Streams as ST
-import qualified System.IO.Streams.Concurrent as ST
 
 import Sync.MerkleTree.Analyse
 import Sync.MerkleTree.Client
@@ -51,11 +48,6 @@ openStreams hIn hOut =
     do inStream <- ST.handleToInputStream hIn
        outStream <- ST.handleToOutputStream hOut
        return $ StreamPair { sp_in = inStream, sp_out = outStream }
-
-mkChanStreams :: IO (InputStream ByteString, OutputStream ByteString)
-mkChanStreams =
-    do chan <- newChan
-       liftM2 (,) (ST.chanToInput chan) (ST.chanToOutput chan)
 
 instance Protocol RPCClient where
     queryHashReq = call . QueryHash
@@ -109,7 +101,7 @@ local source destination =
     do sourceDir <- liftM (mkTrie 0) $ analyse source ignorePaths
        destinationDir <- liftM (mkTrie 0) $ analyse destination ignorePaths
        serverState <- startServerState source sourceDir
-       evalStateT (abstractClient destination destinationDir) serverState
+       evalStateT (syncClient destination destinationDir) serverState
 
 serverOrClient :: LaunchMessage -> StreamPair -> IO (Maybe T.Text)
 serverOrClient lm streams

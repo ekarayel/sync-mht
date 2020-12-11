@@ -5,6 +5,7 @@
 module Sync.MerkleTree.CommTypes where
 
 import GHC.Generics
+import Control.Monad.Trans
 import Data.Set(Set)
 import Data.Bytes.Serial
 import Data.Time.Clock
@@ -13,6 +14,7 @@ import qualified Data.Text as T
 
 import Sync.MerkleTree.Types
 import Sync.MerkleTree.Trie
+import Sync.MerkleTree.Util.Progress
 
 class Protocol m where
     queryHashReq :: TrieLocation -> m Fingerprint
@@ -22,6 +24,15 @@ class Protocol m where
     queryFileContReq :: ContHandle -> m QueryFileResponse
     terminateReq :: Maybe T.Text -> m Bool
     queryTime :: m UTCTime
+
+instance (Monad m, Protocol m) => Protocol (ProgressMonad w m) where
+    queryHashReq = lift . queryHashReq
+    querySetReq = lift . querySetReq
+    logReq = lift . logReq
+    queryFileReq = lift . queryFileReq
+    queryFileContReq = lift . queryFileContReq
+    terminateReq = lift . terminateReq
+    queryTime = lift queryTime
 
 data ContHandle = ContHandle Int
     deriving (Generic)

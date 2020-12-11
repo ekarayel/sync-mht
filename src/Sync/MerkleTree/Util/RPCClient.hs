@@ -27,7 +27,7 @@ Note that the runner assumes FIFO semantics between the channels.
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 module Sync.MerkleTree.Util.RPCClient
-    ( call, runRPCClient, RPCClient
+    ( call, runRPCClient, RPCClient, HasCall
     ) where
 
 import Control.Monad.IO.Class
@@ -67,8 +67,11 @@ instance MonadIO (ClientMonad CallExp) where
 instance MonadFail (ClientMonad CallExp) where
     fail = liftIO . fail
 
-call :: (Serial a, Serial b) => a -> ClientMonad CallExp b
-call = Call . CallExp
+class HasCall m where
+    call :: (Serial a, Serial b) => a -> m b
+
+instance HasCall (ClientMonad CallExp) where
+    call = Call . CallExp
 
 preprocess :: (forall b. v b -> IO (ClientMonad w b)) -> ClientMonad v a -> IO (ClientMonad w a)
 preprocess f (Bind x y) = do
