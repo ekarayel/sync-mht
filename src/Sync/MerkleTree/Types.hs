@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Sync.MerkleTree.Types where
 
 import System.FilePath
@@ -7,10 +5,10 @@ import Data.Int
 import Crypto.Hash
 import Data.Ord
 import GHC.Generics
-import qualified Data.Text as T
+import Data.Text (Text, unpack)
 import Sync.MerkleTree.Trie
-import qualified Data.Bytes.Serial as SE
-import qualified Data.Bytes.Put as P
+import Data.Bytes.Serial (Serial, serialize)
+import Data.Bytes.Put (runPutS)
 
 -- | Information about a file that we expect to change, when the contents change.
 data File
@@ -19,41 +17,34 @@ data File
       , f_size :: FileSize
       , f_modtime :: FileModTime
       }
-      deriving (Eq, Ord, Generic)
-
-instance SE.Serial File
+      deriving (Eq, Ord, Generic, Serial)
 
 data Entry
     = FileEntry File
     | DirectoryEntry Path
-    deriving (Eq, Generic)
-
-instance SE.Serial Entry
+    deriving (Eq, Generic, Serial)
 
 newtype FileSize = FileSize { unFileSize :: Int64 }
-    deriving (Eq, Ord, Generic, Num)
-
-instance SE.Serial FileSize
+    deriving (Eq, Ord, Generic)
+    deriving newtype Num
+    deriving anyclass Serial
 
 data FileModTime = FileModTime { unModTime :: !Int64 }
     deriving (Eq, Ord, Generic)
-
-instance SE.Serial FileModTime
+    deriving anyclass Serial
 
 -- | Representation for paths below the synchronization root directory
 data Path
     = Root
-    | Path T.Text Path
-    deriving (Eq, Ord, Generic)
+    | Path Text Path
+    deriving (Eq, Ord, Generic, Serial)
 
 -- | Returns the string representation of a path
 toFilePath :: FilePath -> Path -> FilePath
 toFilePath fp p =
     case p of
       Root -> fp
-      Path x y -> (toFilePath fp y) </> (T.unpack x)
-
-instance SE.Serial Path
+      Path x y -> (toFilePath fp y) </> (unpack x)
 
 -- | Entries are sorted first according to their depth in the path which is useful for directory
 -- operations
@@ -77,4 +68,4 @@ levelOf e =
       level (Path _ p) = 1 + level p
 
 instance HasDigest Entry where
-    digest = hash . P.runPutS . SE.serialize
+    digest = hash . runPutS . serialize

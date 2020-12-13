@@ -1,14 +1,10 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ImplicitParams #-}
-{-# LANGUAGE MultiWayIf #-}
-{-# LANGUAGE RankNTypes #-}
 module Sync.MerkleTree.Run where
 
 import Control.Concurrent
 import Control.Concurrent.MVar()
 import Control.Monad
 import Data.List
+import Data.String.Interpolate.IsString
 import Data.Version (showVersion)
 import System.Console.GetOpt
 import System.Exit
@@ -139,7 +135,7 @@ main args = flip catchIOError (die . show) $
                  case mMsg of
                    Just err -> die $ T.unpack err
                    Nothing -> return ()
-          | (_,_,errs) <- parsedOpts -> die $ concat $ map (++"\n") errs
+          | (_,_,errs) <- parsedOpts -> die $ unlines errs
 
 version :: String
 version = showVersion P.version
@@ -172,7 +168,7 @@ run so
         do let missingOpts =
                 T.intercalate ", " $ map snd $ filter ((== Nothing) . ($ so) . fst)
                 [(so_source, "--source"), (so_destination, "--destination")]
-           return $ Just $ T.concat [ "The options ", missingOpts, " are required." ]
+           return $ Just $ [i|The options #{missingOpts} are required.|]
     where
       doubleRemote = "Either the directory given in --source or --destination must be local."
       missingRemote = T.concat

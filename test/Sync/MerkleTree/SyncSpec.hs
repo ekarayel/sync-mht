@@ -1,4 +1,3 @@
- {-# LANGUAGE OverloadedStrings #-}
 module Sync.MerkleTree.SyncSpec (spec) where
 
 import Control.Concurrent.MVar

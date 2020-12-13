@@ -1,7 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
 module Sync.MerkleTree.Server where
 
 import Codec.Compression.GZip
@@ -9,10 +5,10 @@ import Control.Monad.State
 import Data.Map (Map)
 import Data.Time.Clock
 import System.IO
+import Data.String.Interpolate.IsString
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Map as M
-import qualified Data.Text as T
 import qualified Data.Text.IO as T
 
 import Sync.MerkleTree.CommTypes
@@ -31,8 +27,7 @@ type ServerMonad = StateT ServerState IO
 
 startServerState :: FilePath -> Trie Entry -> IO ServerState
 startServerState fp trie =
-    do T.hPutStr stderr $ T.pack $
-           concat [ "Hash of source directory:      ", show $ t_hash trie, "\n" ]
+    do T.hPutStr stderr $ [i|Hash of source directory: #{t_hash trie}.\n|]
        return $
            ServerState
            { st_handles = M.empty

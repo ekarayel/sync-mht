@@ -1,7 +1,3 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE ImplicitParams #-}
 module Sync.MerkleTree.CommTypes where
 
 import GHC.Generics

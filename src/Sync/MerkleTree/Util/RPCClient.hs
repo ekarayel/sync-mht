@@ -22,10 +22,6 @@ the runner will evaluate it like
 
 Note that the runner assumes FIFO semantics between the channels.
 -}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE NoMonomorphismRestriction #-}
 module Sync.MerkleTree.Util.RPCClient
     ( call, runRPCClient, RPCClient, HasCall
     ) where

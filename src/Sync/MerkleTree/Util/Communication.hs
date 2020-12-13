@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Sync.MerkleTree.Util.Communication
     ( send, receive
     ) where

@@ -1,6 +1,3 @@
-{-# LANGUAGE ImplicitParams #-}
-{-# LANGUAGE MultiWayIf #-}
-{-# LANGUAGE RankNTypes #-}
 module Sync.MerkleTree.RunSpec (spec) where
 
 import Test.Hspec

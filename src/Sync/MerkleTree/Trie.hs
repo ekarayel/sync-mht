@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveGeneric #-}
 module Sync.MerkleTree.Trie where
 
 import Prelude hiding (lookup)
@@ -12,18 +11,17 @@ import GHC.Generics
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.List as L
-import qualified Data.Bytes.Serial as SE
+import Data.Bytes.Serial (Serial)
 import qualified Data.Set as S
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 
 data Hash = Hash { unHash :: !BS.ByteString }
     deriving (Eq, Generic)
+    deriving anyclass Serial
 
 instance Show Hash where
     showsPrec _ x = ((T.unpack $ TE.decodeUtf8 $ B16.encode $ unHash x) ++)
-
-instance SE.Serial Hash
 
 -- Abstract Merkle Hash Trie
 data Trie a
@@ -39,9 +37,7 @@ data TrieNode a
     deriving (Show, Eq)
 
 data NodeType = NodeType | LeaveType
-    deriving (Eq, Generic)
-
-instance SE.Serial NodeType
+    deriving (Eq, Generic, Serial)
 
 -- Location in the Merkle Hash Trie
 data TrieLocation
@@ -49,9 +45,7 @@ data TrieLocation
       { tl_level :: !Int -- ^ Must be nonnegative
       , tl_index :: !Int -- ^ Must be between nonnegative and smaller than (degree^tl_level)
       }
-      deriving (Generic)
-
-instance SE.Serial TrieLocation
+      deriving (Generic, Serial)
 
 degree :: Int
 degree = 64
@@ -66,9 +60,7 @@ data Fingerprint
       { f_hash :: !Hash
       , f_nodeType :: !NodeType
       }
-      deriving (Eq, Generic)
-
-instance SE.Serial Fingerprint
+      deriving (Eq, Generic, Serial)
 
 toFingerprint :: Trie a -> Fingerprint
 toFingerprint (Trie h node) = Fingerprint h nodeType

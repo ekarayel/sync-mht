@@ -1,5 +1,3 @@
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE FlexibleContexts #-}
 module Sync.MerkleTree.Util.ProgressSpec (spec) where
 
 import Data.Monoid

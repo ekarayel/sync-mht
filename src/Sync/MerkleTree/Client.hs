@@ -1,9 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE ImplicitParams #-}
-{-# LANGUAGE MultiWayIf #-}
 module Sync.MerkleTree.Client where
 
 import Control.Monad
@@ -12,6 +6,7 @@ import Codec.Compression.GZip
 import Data.Function
 import Data.Monoid(Sum(..))
 import Data.Set(Set)
+import Data.String.Interpolate.IsString
 import Data.Time.Clock
 import Data.List
 import Data.Ratio
@@ -99,10 +94,8 @@ checkClockDiff
            t2 <- liftIO getCurrentTime
            case (and [ diffUTCTime t0 t1 < treshold, diffUTCTime t1 t2 < treshold ]) of
              False ->
-                 return $ Just $ T.concat
-                     [ "Warning: Server and client clocks are apart by at least "
-                     , showText treshold, " seconds!"
-                     ]
+                 return $ Just $ 
+                     [i|Warning: Server and client clocks drift by at least #{treshold} seconds!|]
              True ->
                  return Nothing
     | otherwise = return Nothing
@@ -126,14 +119,14 @@ syncClient ::
     -> Trie Entry
     -> m (Maybe T.Text)
 syncClient fp trie =
-    do logClient $ T.concat [ "Hash of destination directory: ", showText $ t_hash trie, "\n" ]
+    do logClient $ [i|Hash of destination directory: #{t_hash trie} \n|]
        Diff oent nent <- nodeReq (rootLocation, trie)
        let (delEntries, changedEntries, newEntries) = analyseEntries (Diff oent nent)
        logClient $ T.concat
-           [ "Client has ", showText $ length delEntries, " superfluos files of size "
-           , dataSizeText delEntries, ", ", showText $ length changedEntries, " changed files of "
-           , "size ", dataSizeText changedEntries, " and ", showText $ length newEntries, " "
-           , "missing files of size ", dataSizeText newEntries, ".\n"
+           [ [i|Client has #{length delEntries} superfluos files of size |]
+           , [i|#{dataSizeText delEntries}, #{length changedEntries} changed files of size |]
+           , [i|#{dataSizeText changedEntries} and #{length newEntries} missing files of size |]
+           , [i|#{dataSizeText newEntries}.\n|]
            ]
        when shouldDelete $
            forM_ (reverse $ sort delEntries) $ \e ->
@@ -160,16 +153,14 @@ showProgess progressLast c =
        l <- liftIO $ readIORef progressLast
        when (diffUTCTime t l > fromRational (1 % 2)) $
            do logClient $ T.concat
-                  [ "Transfering: "
-                  , render c_fileCount "files"
-                  , ", "
-                  , render (unFileSize . c_dataSize) "bytes"
-                  , ".       \r"
+                  [ [i|Transfering: #{render c_fileCount} files, |]
+                  , [i|#{render (unFileSize . c_dataSize)} bytes.            \r|]
                   ]
               t2 <- liftIO getCurrentTime
               liftIO $ writeIORef progressLast t2
     where
-      render f unit = T.concat [showText $ f (ps_completed c), "/", showText $ f (ps_planned c), " ", unit]
+      render :: (Show a) => (Cost -> a) -> T.Text 
+      render f = [i|#{f (ps_completed c)}/#{f (ps_planned c)}|]
 
 synchronizeNewOrChangedEntry :: (MonadIO m, MonadFail m, Protocol m, HasProgress Cost m) => FilePath -> Entry -> m ()
 synchronizeNewOrChangedEntry fp entry =

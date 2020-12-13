@@ -22,12 +22,6 @@ possible to use pairs of progressPlanned and progressCompleted.
 The estimator can also handle situations when the planned cost may increase
 during the run of the computation.
 -}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 module Sync.MerkleTree.Util.Progress
     ( progress
     , progressPlanned
@@ -38,7 +32,6 @@ module Sync.MerkleTree.Util.Progress
     , ProgressState(..)
     ) where
 
-import Sync.MerkleTree.Util.RPCClient
 import Control.Monad.State
 
 data ProgressState w =

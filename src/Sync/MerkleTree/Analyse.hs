@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Sync.MerkleTree.Analyse
     ( analyse
     , isRealFile

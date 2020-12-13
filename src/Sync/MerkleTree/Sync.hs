@@ -1,10 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE ImplicitParams #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE OverloadedStrings #-}
 module Sync.MerkleTree.Sync
     ( child
     , local
@@ -22,9 +15,7 @@ import Prelude hiding (lookup)
 import System.IO
 import System.IO.Streams(InputStream, OutputStream)
 import Data.ByteString(ByteString)
-import qualified Data.Bytes.Serial as SE
-import qualified Data.Bytes.Put as P
-import qualified Data.ByteString as BS
+import Data.Bytes.Serial(Serial)
 import qualified Data.Text as T
 import qualified System.IO.Streams as ST
 
@@ -79,10 +70,10 @@ parent ::
 parent streams source destination direction =
     case direction of
       FromRemote ->
-        do respond (sp_out streams) $ show $ mkLaunchMessage Server source
+        do send (sp_out streams) $ show $ mkLaunchMessage Server source
            serverOrClient (mkLaunchMessage Client destination) streams
       ToRemote ->
-        do respond (sp_out streams) $ show $ mkLaunchMessage Client destination
+        do send (sp_out streams) $ show $ mkLaunchMessage Client destination
            serverOrClient (mkLaunchMessage Server source) streams
     where
       mkLaunchMessage side dir =
@@ -92,9 +83,6 @@ parent streams source destination direction =
           , lm_protocolVersion = thisProtocolVersion
           , lm_side = side
           }
-
-respond :: (SE.Serial a) => OutputStream ByteString -> a -> IO ()
-respond os = mapM_ (flip ST.write os . Just) . (:[BS.empty]) . P.runPutS . SE.serialize
 
 local :: (?clientServerOptions :: ClientServerOptions) => FilePath -> FilePath -> IO (Maybe T.Text)
 local source destination =
@@ -119,7 +107,8 @@ serverOrClient lm streams
 server :: [Entry] -> FilePath -> StreamPair -> IO (Maybe T.Text)
 server entries fp streams = (startServerState fp $ mkTrie 0 entries) >>= evalStateT loop
     where
-       serverRespond = liftIO . respond (sp_out streams)
+       serverRespond :: (MonadIO m, Serial a) => a -> m ()
+       serverRespond = liftIO . send (sp_out streams)
        loop =
            do req <- liftIO $ receive (sp_in streams)
               case req of

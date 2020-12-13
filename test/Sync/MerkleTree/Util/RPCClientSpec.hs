@@ -1,6 +1,3 @@
-{-# LANGUAGE ImplicitParams #-}
-{-# LANGUAGE MultiWayIf #-}
-{-# LANGUAGE RankNTypes #-}
 module Sync.MerkleTree.Util.RPCClientSpec (spec) where
 
 import Data.ByteString(ByteString)
@@ -33,15 +30,18 @@ runWithServer f = do
     _ <- forkIO $ serverLoop
     runRPCClient clientInStream clientOutStream f
 
+testCall :: (HasCall m) => String -> m String
+testCall = call
+
 spec :: Spec
 spec = 
     describe "RPCClient" $ do
         it "orders calls correctly" $ runWithServer $ do
-            r <- liftA2 (,) (call "a") (call "b")
+            r <- liftA2 (,) (testCall "a") (testCall "b")
             liftIO $ r `shouldBe` ("ra","rb")
-            s <- liftM2 (,) (call "c") (call "d")
+            s <- liftM2 (,) (testCall "c") (testCall "d")
             liftIO $ s `shouldBe` ("rc","rd")
-            e <- call ""
+            e <- testCall ""
             liftIO $ e `shouldBe` "r"
         it "does not call when non necessary" $ runRPCClient undefined undefined $ return ()
         it "forwards fails" $ (runRPCClient undefined undefined $ fail "") `shouldThrow` anyException
