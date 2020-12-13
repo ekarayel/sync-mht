@@ -1,50 +1,48 @@
 module Sync.MerkleTree.CommTypes where
 
-import GHC.Generics
 import Control.Monad.Trans
-import Data.Set(Set)
+import Data.ByteString (ByteString)
 import Data.Bytes.Serial
-import Data.Time.Clock
-import Data.ByteString(ByteString)
+import Data.Set (Set)
 import qualified Data.Text as T
-
-import Sync.MerkleTree.Types
+import Data.Time.Clock
+import GHC.Generics
 import Sync.MerkleTree.Trie
+import Sync.MerkleTree.Types
 import Sync.MerkleTree.Util.Progress
 
 class Protocol m where
-    queryHashReq :: TrieLocation -> m Fingerprint
-    querySetReq :: TrieLocation -> m (Set Entry)
-    logReq :: T.Text -> m Bool
-    queryFileReq :: Path -> m QueryFileResponse
-    queryFileContReq :: ContHandle -> m QueryFileResponse
-    terminateReq :: Maybe T.Text -> m Bool
-    queryTime :: m UTCTime
+  queryHashReq :: TrieLocation -> m Fingerprint
+  querySetReq :: TrieLocation -> m (Set Entry)
+  logReq :: T.Text -> m Bool
+  queryFileReq :: Path -> m QueryFileResponse
+  queryFileContReq :: ContHandle -> m QueryFileResponse
+  terminateReq :: Maybe T.Text -> m Bool
+  queryTime :: m UTCTime
 
 instance (Monad m, Protocol m) => Protocol (ProgressMonad w m) where
-    queryHashReq = lift . queryHashReq
-    querySetReq = lift . querySetReq
-    logReq = lift . logReq
-    queryFileReq = lift . queryFileReq
-    queryFileContReq = lift . queryFileContReq
-    terminateReq = lift . terminateReq
-    queryTime = lift queryTime
+  queryHashReq = lift . queryHashReq
+  querySetReq = lift . querySetReq
+  logReq = lift . logReq
+  queryFileReq = lift . queryFileReq
+  queryFileContReq = lift . queryFileContReq
+  terminateReq = lift . terminateReq
+  queryTime = lift queryTime
 
 data ContHandle = ContHandle Int
-    deriving (Generic)
+  deriving (Generic)
 
 instance Serial ContHandle
 
 -- | Configuration shared by both the client and server.
-data ClientServerOptions
-    = ClientServerOptions
-      { cs_add :: Bool
-      , cs_update :: Bool
-      , cs_delete :: Bool
-      , cs_ignore :: [FilePath]
-      , cs_compareClocks :: Maybe (Double, Double)
-      }
-      deriving (Read, Show)
+data ClientServerOptions = ClientServerOptions
+  { cs_add :: Bool,
+    cs_update :: Bool,
+    cs_delete :: Bool,
+    cs_ignore :: [FilePath],
+    cs_compareClocks :: Maybe (Double, Double)
+  }
+  deriving (Read, Show)
 
 shouldAdd :: (?clientServerOptions :: ClientServerOptions) => Bool
 shouldAdd = cs_add ?clientServerOptions
@@ -62,38 +60,37 @@ compareClocks :: (?clientServerOptions :: ClientServerOptions) => Maybe (Double,
 compareClocks = cs_compareClocks ?clientServerOptions
 
 data Request
-    = QuerySet TrieLocation
-    | QueryHash TrieLocation
-    | Log T.Text
-    | QueryFile Path
-    | QueryFileCont ContHandle
-    | Terminate (Maybe T.Text)
-    | QueryTime
-    deriving (Generic)
+  = QuerySet TrieLocation
+  | QueryHash TrieLocation
+  | Log T.Text
+  | QueryFile Path
+  | QueryFileCont ContHandle
+  | Terminate (Maybe T.Text)
+  | QueryTime
+  deriving (Generic)
 
 instance Serial Request
 
 data QueryFileResponse
-    = Final
-    | ToBeContinued ByteString ContHandle
-    deriving (Generic)
+  = Final
+  | ToBeContinued ByteString ContHandle
+  deriving (Generic)
 
 instance Serial QueryFileResponse
 
 data ProtocolVersion = ProtocolVersion !Int
-    deriving (Read, Show, Eq)
+  deriving (Read, Show, Eq)
 
 thisProtocolVersion :: ProtocolVersion
 thisProtocolVersion = ProtocolVersion 5
 
-data LaunchMessage
-    = LaunchMessage
-    { lm_protocolVersion :: ProtocolVersion
-    , lm_dir :: FilePath
-    , lm_side :: Side
-    , lm_clientServerOptions :: ClientServerOptions
-    }
-    deriving (Read, Show)
+data LaunchMessage = LaunchMessage
+  { lm_protocolVersion :: ProtocolVersion,
+    lm_dir :: FilePath,
+    lm_side :: Side,
+    lm_clientServerOptions :: ClientServerOptions
+  }
+  deriving (Read, Show)
 
 data Side = Server | Client
-    deriving (Read, Show)
+  deriving (Read, Show)
